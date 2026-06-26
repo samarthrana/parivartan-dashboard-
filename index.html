@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Parivartan Impact Dashboard</title>
+<style>
+  :root {
+    --brand-ink: #0F1830;
+    --brand-ink-2: #1A2547;
+    --brand-accent: #C9A648;            /* warm gold — accent on dark header */
+    --primary: #1D3461;                 /* deep institutional indigo (replaces brand red as the "active" signal) */
+    --primary-soft: #E8ECF6;
+    --secondary: #003087;               /* deep navy — used in chart accents */
+
+    --page-bg: #F7F8FC;
+    --surface: #FFFFFF;
+    --ink-1: #1A1A2E;
+    --ink-2: #4A5168;
+    --ink-3: #6B7280;
+    --divider: #E5E7EB;
+    --tint: #EEF1FB;
+
+    /* Score bands — verbatim from brief */
+    --excellent-fill: #C8E6C9;  --excellent-text: #1B5E20;
+    --good-fill: #DCEDC8;       --good-text: #33691E;
+    --moderate-fill: #FFE0B2;   --moderate-text: #E65100;
+    --poor-fill: #FFCDD2;       --poor-text: #B71C1C;
+
+    /* OECD criterion accents */
+    --c-relevance: #1976D2;
+    --c-coherence: #7B1FA2;
+    --c-efficiency: #00897B;
+    --c-effectiveness: #2E7D32;
+    --c-impact: #E65100;
+    --c-sustainability: #558B2F;
+    --c-branding: #6D4C41;
+
+    /* Thematic Tool accents */
+    --t-NRM: #1F3A93;
+    --t-HH: #0E8388;
+    --t-SDLE: #C9711F;
+    --t-PoE: #6B3FA0;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: #0a0d18;
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink-1);
+    overflow: hidden;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #0a0d18;
+  }
+  #canvas {
+    width: 1280px; height: 720px;
+    background: var(--page-bg);
+    position: relative;
+    transform-origin: center center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+    overflow: hidden;
+  }
+
+  /* Header — slim, since vnav holds brand */
+  .header {
+    height: 56px; width: 100%;
+    background: #fff;
+    border-bottom: 1px solid var(--divider);
+    display: flex; align-items: center;
+    padding: 0 20px;
+    color: var(--ink-1);
+    gap: 18px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .logo-slot {
+    display: flex; align-items: center; gap: 12px;
+    padding-right: 20px; border-right: 1px solid rgba(255,255,255,0.16);
+    height: 36px;
+  }
+  .logo-mark {
+    width: 36px; height: 36px; border-radius: 6px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand-ink); font-weight: 700; font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+  .logo-text {
+    line-height: 1.1;
+    font-size: 11px; letter-spacing: 0.14em; color: rgba(255,255,255,0.7);
+  }
+  .logo-text strong {
+    display: block; font-size: 13px; letter-spacing: 0.18em; color: #fff;
+    font-weight: 600;
+  }
+  .title-block {
+    display: flex; flex-direction: column; line-height: 1.15;
+  }
+  .title-block .eyebrow {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(255,255,255,0.6); font-weight: 600;
+  }
+  .title-block h1 {
+    margin: 2px 0 0; font-size: 18px; font-weight: 600; letter-spacing: 0.01em;
+  }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .meta-chip {
+    height: 28px; padding: 0 10px; border-radius: 4px;
+    background: #F4F6FB;
+    border: 1px solid var(--divider);
+    color: var(--ink-1); font-size: 10.5px; display: flex; align-items: center; gap: 7px;
+  }
+  .meta-chip .lbl { color: var(--ink-3); }
+  .meta-chip .val { font-weight: 600; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.18); }
+
+  /* Page title in header */
+  .page-title {
+    display: flex; flex-direction: column; line-height: 1.1;
+  }
+  .page-title .crumb {
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600;
+  }
+  .page-title h1 {
+    margin: 2px 0 0; font-size: 16px; font-weight: 600; color: var(--ink-1); letter-spacing: 0.01em;
+  }
+
+  /* Vertical left nav */
+  .vnav {
+    width: 168px;
+    height: 100%;
+    background: var(--brand-ink);
+    color: #fff;
+    display: flex; flex-direction: column;
+    padding: 14px 0 10px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .vnav::after {
+    content: "";
+    position: absolute; right: 0; top: 0; bottom: 0; width: 1px;
+    background: rgba(255,255,255,0.06);
+  }
+  .vnav-brand {
+    display: flex; align-items: center; gap: 9px;
+    padding: 0 14px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .vnav-brand .logo-mark {
+    width: 30px; height: 30px; border-radius: 5px;
+    background: var(--brand-accent);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand-ink); font-weight: 700; font-size: 13px;
+  }
+  .vnav-brand .txt { line-height: 1.05; }
+  .vnav-brand .txt strong {
+    display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; color: #fff;
+  }
+  .vnav-brand .txt span {
+    display: block; font-size: 8.5px; letter-spacing: 0.14em; color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+  }
+  .vnav-section {
+    padding: 12px 12px 4px;
+    font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.4); text-transform: uppercase;
+  }
+  .vnav-items { display: flex; flex-direction: column; padding: 0 8px; gap: 1px; }
+  .vnav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 5px;
+    font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.78);
+    cursor: pointer; user-select: none;
+    position: relative;
+    transition: background 120ms ease, color 120ms ease;
+  }
+  .vnav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .vnav-item.active {
+    background: rgba(255,255,255,0.08);
+    color: #fff; font-weight: 600;
+  }
+  .vnav-item.active::before {
+    content: "";
+    position: absolute; left: -8px; top: 6px; bottom: 6px; width: 3px;
+    background: var(--brand-accent); border-radius: 0 2px 2px 0;
+  }
+  .vnav-item .num {
+    width: 20px; height: 20px; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.78);
+    flex-shrink: 0;
+  }
+  .vnav-item.active .num { background: var(--brand-accent); color: var(--brand-ink); }
+  .vnav-foot {
+    margin-top: auto;
+    padding: 10px 14px 4px;
+    font-size: 8.5px; color: rgba(255,255,255,0.4);
+    line-height: 1.4; letter-spacing: 0.04em;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .vnav-foot strong { color: rgba(255,255,255,0.7); display: block; margin-bottom: 2px; font-size: 9.5px; letter-spacing: 0.08em; }
+
+  /* Body — vnav + right column */
+  .body-row {
+    display: flex; align-items: stretch;
+    width: 100%; height: 100%;
+  }
+  .main-col {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    height: 100%;
+  }
+
+  /* Filter bar */
+  .filterbar {
+    height: 40px; width: 100%;
+    background: #fff;
+    border-bottom: 1px solid var(--divider);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 8px;
+    font-size: 11px;
+  }
+  .filter-label { color: var(--ink-3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; margin-right: 4px; }
+  .slicer {
+    display: flex; align-items: center; gap: 6px;
+    height: 26px; padding: 0 10px;
+    border: 1px solid var(--divider); border-radius: 4px;
+    background: #fff; cursor: pointer;
+    font-size: 11px; color: var(--ink-1);
+    white-space: nowrap;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .slicer:hover { border-color: #C9D0DF; background: #FAFBFE; }
+  .slicer .k { color: var(--ink-3); font-size: 10px; letter-spacing: 0.04em; }
+  .slicer .v { font-weight: 600; }
+  .slicer .caret { color: var(--ink-3); font-size: 9px; margin-left: 2px; }
+  .slicer.active { border-color: var(--primary); background: var(--primary-soft); }
+
+  /* Dropdown */
+  .slicer-wrap { position: relative; }
+  .dropdown {
+    position: absolute; top: 30px; left: 0;
+    min-width: 170px; max-height: 232px;
+    background: #fff; border: 1px solid #C9D0DF;
+    border-radius: 5px;
+    box-shadow: 0 12px 28px rgba(15,24,48,0.18), 0 2px 6px rgba(15,24,48,0.08);
+    z-index: 200;
+    padding: 4px;
+    font-size: 11px;
+    display: flex; flex-direction: column;
+  }
+  .dd-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #CFD5E2 transparent; }
+  .dd-scroll::-webkit-scrollbar { width: 6px; }
+  .dd-scroll::-webkit-scrollbar-thumb { background: #CFD5E2; border-radius: 3px; }
+  .dd-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; border-radius: 3px; cursor: pointer;
+    color: var(--ink-1);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .dd-opt:hover { background: var(--tint); }
+  .dd-opt.selected { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  .dd-opt .check {
+    width: 13px; height: 13px;
+    border: 1.5px solid #C9D0DF; border-radius: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 700;
+    background: #fff; flex-shrink: 0;
+  }
+  .dd-opt.selected .check { background: var(--primary); border-color: var(--primary); }
+  .dd-opt.radio .check { border-radius: 50%; }
+  .dd-divider { height: 1px; background: var(--divider); margin: 4px 2px; }
+  .dd-header {
+    padding: 4px 8px 6px;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-3); text-transform: uppercase;
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 3px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .dd-link { font-size: 10px; color: var(--primary); cursor: pointer; font-weight: 600; text-transform: none; letter-spacing: 0; }
+  .dd-link:hover { text-decoration: underline; }
+  .reset-btn {
+    margin-left: auto;
+    height: 26px; padding: 0 12px;
+    border: 1px solid var(--primary); color: var(--primary); background: #fff;
+    border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+    transition: background 120ms ease, color 120ms ease;
+  }
+  .reset-btn:hover { background: var(--primary); color: #fff; }
+  .filter-count { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+
+  /* Content area */
+  .content {
+    flex: 1; min-height: 0;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .content-inner { height: 100%; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+  /* Generic primitives */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: 6px;
+    padding: 12px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card h3 {
+    margin: 0; padding: 0;
+    font-size: 13px; font-weight: 600; color: var(--ink-1); letter-spacing: 0.01em;
+  }
+  .card .sub {
+    margin-top: 2px;
+    font-size: 10.5px; color: var(--ink-3);
+  }
+  .card-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .card-header .right { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--ink-3); }
+
+  .row { display: flex; gap: 10px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+
+  /* KPI card */
+  .kpi {
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 6px;
+    padding: 8px 12px;
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .kpi .lbl { font-size: 9.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; }
+  .kpi .val { font-size: 22px; font-weight: 600; color: var(--ink-1); line-height: 1.1; margin-top: 3px; letter-spacing: -0.01em; }
+  .kpi .delta { font-size: 9.5px; color: var(--ink-3); margin-top: 3px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi .delta .up { color: #16a34a; font-weight: 600; }
+  .kpi .delta .dn { color: #dc2626; font-weight: 600; }
+  .kpi .accent-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--primary); }
+
+  /* Band tag */
+  .band {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 18px; padding: 0 8px; border-radius: 9px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .band.excellent { background: var(--excellent-fill); color: var(--excellent-text); }
+  .band.good { background: var(--good-fill); color: var(--good-text); }
+  .band.moderate { background: var(--moderate-fill); color: var(--moderate-text); }
+  .band.poor { background: var(--poor-fill); color: var(--poor-text); }
+
+  /* Score cell */
+  .scell {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 36px; padding: 3px 6px; border-radius: 4px;
+    font-size: 11.5px; font-weight: 600;
+    line-height: 1.1;
+  }
+  .scell .n { font-size: 8px; font-weight: 500; margin-top: 1px; opacity: 0.75; }
+  .scell.excellent { background: var(--excellent-fill); color: var(--excellent-text); }
+  .scell.good { background: var(--good-fill); color: var(--good-text); }
+  .scell.moderate { background: var(--moderate-fill); color: var(--moderate-text); }
+  .scell.poor { background: var(--poor-fill); color: var(--poor-text); }
+  .scell.na { background: #F3F4F6; color: #9CA3AF; }
+
+  /* Tables */
+  table.matrix {
+    width: 100%; border-collapse: collapse;
+    font-size: 11px;
+  }
+  table.matrix th, table.matrix td {
+    padding: 5px 6px;
+    text-align: left;
+    border-bottom: 1px solid var(--divider);
+    vertical-align: middle;
+  }
+  table.matrix th {
+    font-size: 9.5px; font-weight: 600; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    background: #FAFBFE; position: sticky; top: 0; z-index: 1;
+  }
+  table.matrix td.num, table.matrix th.num { text-align: center; }
+  table.matrix tr.group-header td {
+    background: var(--tint);
+    font-size: 11px; font-weight: 700; color: var(--ink-1);
+    padding-top: 7px; padding-bottom: 7px;
+    letter-spacing: 0.02em;
+  }
+  table.matrix tr.subtotal td {
+    background: #F8FAFC;
+    font-weight: 600;
+    color: var(--ink-1);
+  }
+  table.matrix tr.grand td {
+    background: var(--brand-ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  table.matrix tr.grand td .scell { font-size: 13px; }
+  .scroll {
+    overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: thin; scrollbar-color: #CFD5E2 transparent;
+  }
+  .scroll::-webkit-scrollbar { width: 6px; }
+  .scroll::-webkit-scrollbar-thumb { background: #CFD5E2; border-radius: 3px; }
+
+  /* Score bars */
+  .bar-track {
+    position: relative; height: 8px; border-radius: 4px;
+    background: #F1F3F8; overflow: hidden;
+  }
+  .bar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    border-radius: 4px;
+  }
+
+  /* Legend strip */
+  .legend {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 10.5px; color: var(--ink-2);
+  }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 14px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.06); }
+
+  /* Sub-tab strip (Tab 5) */
+  .subtabs {
+    display: flex; align-items: stretch; gap: 4px;
+    background: transparent;
+    margin-bottom: 8px;
+  }
+  .subtab {
+    padding: 0 14px; height: 30px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--ink-2); font-weight: 500;
+    background: #fff; border: 1px solid var(--divider); border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 120ms ease;
+  }
+  .subtab:hover { border-color: #C9D0DF; }
+  .subtab.active {
+    background: var(--brand-ink); color: #fff; border-color: var(--brand-ink);
+    font-weight: 600;
+  }
+  .subtab.active .num { background: rgba(255,255,255,0.18); color: #fff; }
+  .subtab .num {
+    width: 16px; height: 16px; border-radius: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; background: var(--tint); color: var(--primary);
+  }
+
+  /* Tool tag */
+  .tool-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 16px; padding: 0 6px; border-radius: 3px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .tool-tag.NRM { background: rgba(31,58,147,0.10); color: var(--t-NRM); }
+  .tool-tag.HH { background: rgba(14,131,136,0.10); color: var(--t-HH); }
+  .tool-tag.SDLE { background: rgba(201,113,31,0.12); color: var(--t-SDLE); }
+  .tool-tag.PoE { background: rgba(107,63,160,0.10); color: var(--t-PoE); }
+
+  /* Footer */
+  .canvas-foot {
+    height: 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    font-size: 9.5px; color: var(--ink-3);
+    background: #fff; border-top: 1px solid var(--divider);
+    letter-spacing: 0.04em;
+  }
+  .canvas-foot .left { display: flex; align-items: center; gap: 12px; }
+  .canvas-foot .right { display: flex; align-items: center; gap: 12px; }
+
+  /* Adjust content height to leave room for footer */
+
+  /* Hover affordance */
+  .row-hint { font-size: 9.5px; color: var(--ink-3); }
+
+  /* Disabled-looking dim */
+  .dim { opacity: 0.55; }
+
+  /* Scoped utilities */
+  .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .right { text-align: right; }
+  .center { text-align: center; }
+  .grow { flex: 1; min-width: 0; }
+  .pill {
+    display: inline-flex; align-items: center; height: 16px; padding: 0 6px;
+    border-radius: 8px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em;
+  }
+
+  /* Map */
+  .map-wrap { position: relative; width: 100%; height: 100%; }
+  .map-state {
+    cursor: pointer;
+    transition: filter 120ms ease, stroke 120ms ease;
+    stroke: #fff; stroke-width: 1.2;
+  }
+  .map-state:hover { filter: brightness(0.92); stroke: var(--ink-1); stroke-width: 1.6; }
+  .map-label { font-size: 9px; font-weight: 700; fill: #fff; pointer-events: none; }
+  .map-label-score { font-size: 8.5px; font-weight: 600; fill: #fff; pointer-events: none; }
+
+  /* Gauges */
+  .gauge { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .gauge svg { display: block; }
+  .gauge .lbl { font-size: 9px; color: var(--ink-2); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; }
+  .gauge .band { height: 13px; padding: 0 5px; font-size: 8px; }
+
+  /* Tooltips disabled - use direct labelling */
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#0F1830">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0F1830"/>
+    <!-- Dashboard silhouette -->
+    <rect x="120" y="160" width="960" height="60" rx="6" fill="#1A2547"/>
+    <rect x="140" y="178" width="180" height="24" rx="3" fill="#C9A648"/>
+    <rect x="340" y="178" width="320" height="24" rx="3" fill="#2A3760"/>
+    <!-- Tab strip -->
+    <rect x="120" y="240" width="960" height="44" rx="4" fill="#F7F8FC"/>
+    <rect x="140" y="262" width="120" height="6" rx="3" fill="#1D3461"/>
+    <rect x="280" y="262" width="140" height="6" rx="3" fill="#9CA3AF" opacity="0.5"/>
+    <rect x="440" y="262" width="140" height="6" rx="3" fill="#9CA3AF" opacity="0.5"/>
+    <rect x="600" y="262" width="160" height="6" rx="3" fill="#9CA3AF" opacity="0.5"/>
+    <rect x="780" y="262" width="180" height="6" rx="3" fill="#9CA3AF" opacity="0.5"/>
+    <!-- KPI cards -->
+    <g>
+      <rect x="120" y="320" width="184" height="80" rx="6" fill="#FFFFFF"/>
+      <rect x="120" y="320" width="3" height="80" fill="#1D3461"/>
+      <rect x="140" y="350" width="80" height="22" rx="3" fill="#1A1A2E"/>
+      <rect x="316" y="320" width="184" height="80" rx="6" fill="#FFFFFF"/>
+      <rect x="316" y="320" width="3" height="80" fill="#1D3461"/>
+      <rect x="512" y="320" width="184" height="80" rx="6" fill="#FFFFFF"/>
+      <rect x="512" y="320" width="3" height="80" fill="#1D3461"/>
+      <rect x="708" y="320" width="184" height="80" rx="6" fill="#FFFFFF"/>
+      <rect x="708" y="320" width="3" height="80" fill="#0E8388"/>
+      <rect x="904" y="320" width="176" height="80" rx="6" fill="#FFFFFF"/>
+      <rect x="904" y="320" width="3" height="80" fill="#C9711F"/>
+    </g>
+    <!-- Score tiles -->
+    <g>
+      <rect x="120" y="420" width="184" height="86" rx="6" fill="#FFFFFF"/>
+      <rect x="120" y="420" width="184" height="3" fill="#33691E"/>
+      <rect x="316" y="420" width="184" height="86" rx="6" fill="#FFFFFF"/>
+      <rect x="316" y="420" width="184" height="3" fill="#E65100"/>
+      <rect x="512" y="420" width="184" height="86" rx="6" fill="#FFFFFF"/>
+      <rect x="512" y="420" width="184" height="3" fill="#33691E"/>
+      <rect x="708" y="420" width="184" height="86" rx="6" fill="#FFFFFF"/>
+      <rect x="708" y="420" width="184" height="3" fill="#E65100"/>
+      <rect x="904" y="420" width="176" height="86" rx="6" fill="#FFFFFF"/>
+      <rect x="904" y="420" width="176" height="3" fill="#0F1830"/>
+    </g>
+    <!-- OECD bar -->
+    <g>
+      <rect x="120" y="528" width="540" height="160" rx="6" fill="#FFFFFF"/>
+      <rect x="140" y="568" width="81"  height="24" fill="#1976D2"/>
+      <rect x="221" y="568" width="54"  height="24" fill="#7B1FA2"/>
+      <rect x="275" y="568" width="81"  height="24" fill="#00897B"/>
+      <rect x="356" y="568" width="108" height="24" fill="#2E7D32"/>
+      <rect x="464" y="568" width="135" height="24" fill="#E65100"/>
+      <rect x="599" y="568" width="54"  height="24" fill="#558B2F"/>
+      <rect x="653" y="568" width="27"  height="24" fill="#6D4C41"/>
+      <rect x="672" y="528" width="408" height="160" rx="6" fill="#FFFFFF"/>
+      <!-- HRDP vs FDP placeholder bars -->
+      <rect x="700" y="568" width="180" height="6" rx="3" fill="#003087"/>
+      <rect x="700" y="582" width="140" height="6" rx="3" fill="#9B2D3D"/>
+      <rect x="700" y="600" width="170" height="6" rx="3" fill="#003087"/>
+      <rect x="700" y="614" width="120" height="6" rx="3" fill="#9B2D3D"/>
+    </g>
+    <!-- Brand wordmark -->
+    <text x="600" y="120" text-anchor="middle"
+          font-family="Segoe UI, Helvetica, Arial, sans-serif"
+          font-size="32" font-weight="700" fill="#FFFFFF" letter-spacing="6">PARIVARTAN</text>
+    <text x="600" y="148" text-anchor="middle"
+          font-family="Segoe UI, Helvetica, Arial, sans-serif"
+          font-size="13" font-weight="500" fill="#C9A648" letter-spacing="4">IMPACT INTELLIGENCE</text>
+  </svg>
+</template>
+<div id="stage">
+  <div id="canvas">
+    <div id="root" style="width:100%;height:100%;"></div>
+  </div>
+</div>
+
+<script>
+  // Scale 1280x720 canvas to viewport
+  function fit() {
+    const c = document.getElementById('canvas');
+    const sx = window.innerWidth / 1280;
+    const sy = window.innerHeight / 720;
+    const s = Math.min(sx, sy);
+    c.style.transform = `scale(${s})`;
+  }
+  window.addEventListener('resize', fit);
+  fit();
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useRef, useEffect } = React;
+
+/* ============================================================
+   DATA
+   ============================================================ */
+
+const BANDS = {
+  excellent: { min: 4.6, label: "Excellent", fill: "#C8E6C9", text: "#1B5E20" },
+  good:      { min: 3.6, label: "Good",      fill: "#DCEDC8", text: "#33691E" },
+  moderate:  { min: 2.6, label: "Moderate",  fill: "#FFE0B2", text: "#E65100" },
+  poor:      { min: 0,   label: "Poor",      fill: "#FFCDD2", text: "#B71C1C" },
+};
+const bandOf = (s) => {
+  if (s == null || isNaN(s)) return "na";
+  if (s >= 4.6) return "excellent";
+  if (s >= 3.6) return "good";
+  if (s >= 2.6) return "moderate";
+  return "poor";
+};
+const bandColor = (s) => {
+  const b = bandOf(s);
+  return b === "na"
+    ? { fill: "#F3F4F6", text: "#9CA3AF" }
+    : { fill: BANDS[b].fill, text: BANDS[b].text };
+};
+
+const CRITERIA = [
+  { key: "Relevance",      weight: 15, color: "#1976D2" },
+  { key: "Coherence",      weight: 10, color: "#7B1FA2" },
+  { key: "Efficiency",     weight: 15, color: "#00897B" },
+  { key: "Effectiveness",  weight: 20, color: "#2E7D32" },
+  { key: "Impact",         weight: 25, color: "#E65100" },
+  { key: "Sustainability", weight: 10, color: "#558B2F" },
+  { key: "Branding",       weight: 5,  color: "#6D4C41" },
+];
+
+const TOOLS = [
+  { key: "NRM",  full: "Natural Resource Management",        score: 3.82, color: "#1F3A93" },
+  { key: "H&H",  full: "Health & Hygiene",                   score: 3.45, color: "#0E8388" },
+  { key: "SDLE", full: "Skill Development & Livelihood",     score: 3.71, color: "#C9711F" },
+  { key: "PoE",  full: "Promotion of Education",             score: 3.28, color: "#6B3FA0" },
+];
+
+const PROJECTS = [
+  { rank: 1,  code: "P0314", partner: "PRADAN",       state: "Maharashtra",    zone: "West",          score: 4.8, type: "HRDP", budget: 6.5 },
+  { rank: 2,  code: "P0633", partner: "CInI",         state: "Uttar Pradesh",  zone: "North 1",       score: 4.6, type: "FDP",  budget: 7.3 },
+  { rank: 3,  code: "P0156", partner: "Srinivas Fdn", state: "Tamil Nadu",     zone: "South",         score: 4.5, type: "HRDP", budget: 7.8 },
+  { rank: 4,  code: "P0389", partner: "RCDC",         state: "Madhya Pradesh", zone: "Central India", score: 4.1, type: "HRDP", budget: 5.4 },
+  { rank: 5,  code: "P0278", partner: "DHAN",         state: "Karnataka",      zone: "South",         score: 3.9, type: "FDP",  budget: 6.1 },
+  { rank: 6,  code: "P0512", partner: "MYRADA",       state: "Odisha",         zone: "East",          score: 3.6, type: "HRDP", budget: 8.2 },
+  { rank: 7,  code: "P0297", partner: "BAIF",         state: "Rajasthan",      zone: "North 2",       score: 3.2, type: "HRDP", budget: 4.2 },
+  { rank: 8,  code: "P0421", partner: "Seva Rural",   state: "Jharkhand",      zone: "East",          score: 2.8, type: "HRDP", budget: 3.1 },
+  { rank: 9,  code: "P0445", partner: "BASIX",        state: "Gujarat",        zone: "West",          score: 2.3, type: "FDP",  budget: 2.6 },
+  { rank: 10, code: "P0573", partner: "AKRSP",        state: "Bihar",          zone: "North 1",       score: 1.8, type: "FDP",  budget: 1.9 },
+];
+
+// 20-row OECD parameter matrix (Tab 2). [PoE, H&H, SDLE, NRM, Overall] + n samples
+const SUB_INDICATORS = [
+  { c: "Relevance", n: "Beneficiaries need alignment", v: [3.9,3.7,4.1,4.3,4.0], ns: [49,35,40,53] },
+  { c: "Relevance", n: "Local context alignment",      v: [3.5,3.4,3.8,3.9,3.7], ns: [43,32,38,51] },
+  { c: "Relevance", n: "Quality of design",            v: [3.2,3.1,3.5,3.6,3.4], ns: [41,30,37,49] },
+  { c: "Coherence", n: "Internal Coherence",           v: [3.3,3.2,3.6,3.7,3.5], ns: [36,28,30,45] },
+  { c: "Coherence", n: "External Coherence",           v: [3.1,3.0,3.3,3.5,3.2], ns: [33,27,29,42] },
+  { c: "Efficiency", n: "Timeliness",                  v: [3.8,3.5,3.9,4.1,3.8], ns: [29,33,34,46] },
+  { c: "Efficiency", n: "Quality of service provided", v: [3.6,3.4,3.7,3.9,3.7], ns: [49,35,35,53] },
+  { c: "Efficiency", n: "Operational efficiency",      v: [3.0,2.9,3.2,3.4,3.1], ns: [17,21,15,28] },
+  { c: "Efficiency", n: "Project design",              v: [3.2,3.1,3.4,3.5,3.3], ns: [41,27,39,45] },
+  { c: "Effectiveness", n: "Interim Results (Outputs)",       v: [3.7,3.5,3.8,4.0,3.8], ns: [17,21,15,38] },
+  { c: "Effectiveness", n: "Reach (target vs achievement)",   v: [3.5,3.3,3.6,3.8,3.6], ns: [39,33,32,45] },
+  { c: "Effectiveness", n: "Influencing factors",             v: [3.1,3.0,3.3,3.4,3.2], ns: [37,32,33,44] },
+  { c: "Effectiveness", n: "Differential results",            v: [3.0,2.9,3.1,3.3,3.1], ns: [35,29,31,41] },
+  { c: "Effectiveness", n: "Adaptation over time",            v: [2.9,2.8,3.0,3.2,3.0], ns: [13,17,17,28] },
+  { c: "Impact", n: "Significance (outcome)",          v: [3.5,3.3,3.8,4.1,3.7], ns: [35,21,21,39] },
+  { c: "Impact", n: "Transformational change",         v: [3.0,2.9,3.2,3.5,3.2], ns: [13,18,18,28] },
+  { c: "Impact", n: "Unintended change",               v: [2.8,2.7,3.0,3.3,2.9], ns: [22,18,18,28] },
+  { c: "Sustainability", n: "Potential for continuity", v: [3.6,3.4,3.7,3.9,3.7], ns: [36,22,25,40] },
+  { c: "Sustainability", n: "Sustainability in design", v: [3.2,3.1,3.4,3.6,3.3], ns: [30,25,24,33] },
+  { c: "Branding", n: "Visibility (visible/word of mouth)", v: [4.2,4.1,4.3,4.5,4.3], ns: [33,27,28,39] },
+];
+
+// Subtotals per criterion (averaged in brief)
+const CRITERION_SUBTOTAL = {
+  Relevance:      { v: [3.6,3.4,3.8,4.0,3.7], ns: [133,97,115,153] },
+  Coherence:      { v: [3.2,3.1,3.5,3.6,3.4], ns: [69,55,59,87] },
+  Efficiency:     { v: [3.4,3.2,3.6,3.7,3.5], ns: [136,116,123,172] },
+  Effectiveness:  { v: [3.2,3.1,3.4,3.5,3.3], ns: [141,132,128,196] },
+  Impact:         { v: [3.1,3.0,3.3,3.6,3.3], ns: [70,57,57,95] },
+  Sustainability: { v: [3.4,3.3,3.6,3.8,3.5], ns: [66,47,49,73] },
+  Branding:       { v: [4.2,4.1,4.3,4.5,4.3], ns: [33,27,28,39] },
+};
+
+// Tool × criterion matrix (Tab 3)
+const TOOL_CRIT = {
+  NRM:  [4.0, 3.6, 3.7, 3.5, 3.6, 3.8, 4.5],
+  "H&H":[3.7, 3.1, 3.2, 3.1, 3.0, 3.3, 4.1],
+  SDLE: [3.8, 3.5, 3.6, 3.4, 3.3, 3.6, 4.3],
+  PoE:  [3.6, 3.2, 3.4, 3.2, 3.1, 3.4, 4.2],
+};
+
+// Partner × OECD heatmap (Tab 5A)
+const PARTNERS = [
+  { p: "PRADAN",       proj: 1, v: [4.9,4.7,4.8,4.8,4.7,4.8,5.0,4.8] },
+  { p: "CInI",         proj: 1, v: [4.7,4.5,4.6,4.5,4.6,4.6,4.8,4.6] },
+  { p: "Srinivas Fdn", proj: 1, v: [4.4,4.3,4.5,4.4,4.5,4.5,4.7,4.5] },
+  { p: "RCDC",         proj: 1, v: [4.0,3.9,4.1,4.0,4.1,4.1,4.4,4.1] },
+  { p: "DHAN",         proj: 1, v: [3.8,3.7,3.9,3.8,3.9,3.9,4.2,3.9] },
+  { p: "MYRADA",       proj: 1, v: [3.5,3.4,3.6,3.5,3.6,3.6,3.9,3.6] },
+  { p: "BAIF",         proj: 1, v: [3.1,3.0,3.2,3.1,3.2,3.2,3.5,3.2] },
+  { p: "Seva Rural",   proj: 1, v: [2.7,2.6,2.8,2.7,2.8,2.8,3.1,2.8] },
+  { p: "BASIX",        proj: 1, v: [2.2,2.1,2.3,2.2,2.3,2.3,2.6,2.3] },
+  { p: "AKRSP",        proj: 1, v: [1.7,1.6,1.8,1.7,1.8,1.8,2.1,1.8] },
+];
+
+// State × Tool matrix (Tab 4) — derived approximation per brief; tool scores per state
+const STATE_TOOL = {
+  Maharashtra:    { proj: 1, v: [5.0,4.9,5.0,4.5], overall: 4.8 },
+  "Uttar Pradesh":{ proj: 1, v: [4.8,5.0,4.9,4.4], overall: 4.6 },
+  "Tamil Nadu":   { proj: 1, v: [4.5,4.9,4.5,4.1], overall: 4.5 },
+  "Madhya Pradesh":{proj: 1, v: [3.9,3.6,4.2,4.3], overall: 4.1 },
+  Karnataka:      { proj: 1, v: [3.9,4.3,4.4,3.5], overall: 3.9 },
+  Odisha:         { proj: 1, v: [3.8,3.4,3.8,4.2], overall: 3.6 },
+  Rajasthan:      { proj: 1, v: [3.6,3.2,2.8,2.8], overall: 3.2 },
+  Jharkhand:      { proj: 1, v: [2.6,2.2,3.3,3.0], overall: 2.8 },
+  Gujarat:        { proj: 1, v: [2.4,2.7,2.8,2.0], overall: 2.3 },
+  Bihar:          { proj: 1, v: [2.3,1.4,1.3,1.9], overall: 1.8 },
+};
+
+// Interventions ranking (Tab 5C)
+const INTERVENTIONS = [
+  { name: "Plantation",            score: 4.3, tool: "NRM"  },
+  { name: "Teacher Training",      score: 4.1, tool: "PoE"  },
+  { name: "Water Management",      score: 3.9, tool: "NRM"  },
+  { name: "Input Support",         score: 3.8, tool: "SDLE" },
+  { name: "Capacity Building",     score: 3.7, tool: "SDLE" },
+  { name: "Health Infrastructure", score: 3.5, tool: "H&H"  },
+  { name: "School Infrastructure", score: 3.4, tool: "PoE"  },
+  { name: "Clean Energy",          score: 3.3, tool: "NRM"  },
+  { name: "Drinking Water",        score: 3.1, tool: "H&H"  },
+  { name: "Sanitation",            score: 2.9, tool: "H&H"  },
+];
+
+// Zone aggregates (Tab 5B) — HDFC 7-zone tier model:
+//   Zone 1 (high-priority): Central India, South
+//   Zone 2 (medium):        North East, West, Pan India
+//   Zone 3 (focus):         East, North 1, North 2
+// v[]: [NRM, H&H, SDLE, PoE] aggregate scores
+const ZONES = [
+  { zone: "Central India", tier: "Zone 1", proj: 1, v: { NRM: 4.3, "H&H": 3.6, SDLE: 4.2, PoE: 3.9 } },
+  { zone: "South",         tier: "Zone 1", proj: 2, v: { NRM: 3.8, "H&H": 4.6, SDLE: 4.45, PoE: 4.2 } },
+  { zone: "North East",    tier: "Zone 2", proj: 0, v: null },
+  { zone: "West",          tier: "Zone 2", proj: 2, v: { NRM: 3.25, "H&H": 3.8, SDLE: 3.9, PoE: 3.7 } },
+  { zone: "Pan India",     tier: "Zone 2", proj: 0, v: null },
+  { zone: "East",          tier: "Zone 3", proj: 2, v: { NRM: 3.6, "H&H": 2.8, SDLE: 3.55, PoE: 3.2 } },
+  { zone: "North 1",       tier: "Zone 3", proj: 2, v: { NRM: 3.15, "H&H": 3.2, SDLE: 3.1, PoE: 3.55 } },
+  { zone: "North 2",       tier: "Zone 3", proj: 1, v: { NRM: 2.8, "H&H": 3.2, SDLE: 2.8, PoE: 3.6 } },
+];
+
+// HRDP vs FDP comparison per criterion (Tab 1 right panel)
+const HRDP_FDP = [
+  { c: "Relevance",      HRDP: 3.9, FDP: 3.4 },
+  { c: "Coherence",      HRDP: 3.5, FDP: 3.1 },
+  { c: "Efficiency",     HRDP: 3.7, FDP: 3.2 },
+  { c: "Effectiveness",  HRDP: 3.5, FDP: 3.0 },
+  { c: "Impact",         HRDP: 3.6, FDP: 2.9 },
+  { c: "Sustainability", HRDP: 3.6, FDP: 3.3 },
+  { c: "Branding",       HRDP: 4.4, FDP: 4.1 },
+];
+
+/* ============================================================
+   FILTER CONTEXT — wires all 5 slicers to live data
+   ============================================================ */
+
+const ALL_STATES = ["Maharashtra","Uttar Pradesh","Tamil Nadu","Madhya Pradesh","Karnataka","Odisha","Rajasthan","Jharkhand","Gujarat","Bihar"];
+const ALL_FYS = ["FY 2023–24","FY 2024–25","FY 2025–26"];
+const ALL_THEMES = ["PoE","H&H","SDLE","NRM"];
+const ALL_INTERVENTIONS = INTERVENTIONS.map(i => i.name);
+const ALL_CODES = PROJECTS.map(p => p.code);
+const ALL_PARTNERS = [...new Set(PROJECTS.map(p => p.partner))];
+
+const DEFAULT_FILTERS = {
+  states: [],
+  fy: "FY 2025–26",
+  themes: [],
+  interventions: [],
+  codes: [],
+  partners: [],
+};
+
+const FilterCtx = React.createContext(null);
+
+function FilterProvider({ children }) {
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+
+  const toggle = (key, value) => {
+    setFilters(f => {
+      const arr = f[key];
+      if (Array.isArray(arr)) {
+        const next = arr.includes(value) ? arr.filter(x => x !== value) : [...arr, value];
+        return { ...f, [key]: next };
+      }
+      return { ...f, [key]: value };
+    });
+  };
+  const setSingle = (key, value) => setFilters(f => ({ ...f, [key]: value }));
+  const clear = (key) => setFilters(f => ({ ...f, [key]: [] }));
+  const reset = () => setFilters(DEFAULT_FILTERS);
+
+  // Filter projects by state, code, partner; theme/intervention used for dimming + Tab5C
+  const filteredProjects = PROJECTS.filter(p =>
+    (filters.states.length === 0 || filters.states.includes(p.state)) &&
+    (filters.codes.length === 0 || filters.codes.includes(p.code)) &&
+    (filters.partners.length === 0 || filters.partners.includes(p.partner))
+  );
+  const filteredInterventions = INTERVENTIONS.filter(it =>
+    (filters.themes.length === 0 || filters.themes.includes(it.tool)) &&
+    (filters.interventions.length === 0 || filters.interventions.includes(it.name))
+  );
+
+  const isActiveTool  = (t) => filters.themes.length === 0 || filters.themes.includes(t);
+  const isActiveState = (s) => filters.states.length === 0 || filters.states.includes(s);
+  const isActiveCode  = (c) => filters.codes.length === 0 || filters.codes.includes(c);
+
+  const activeCount = (filters.states.length ? 1 : 0) + (filters.themes.length ? 1 : 0)
+    + (filters.interventions.length ? 1 : 0) + (filters.codes.length ? 1 : 0)
+    + (filters.partners.length ? 1 : 0)
+    + (filters.fy !== DEFAULT_FILTERS.fy ? 1 : 0);
+
+  return (
+    <FilterCtx.Provider value={{
+      filters, toggle, setSingle, clear, reset,
+      filteredProjects, filteredInterventions,
+      isActiveTool, isActiveState, isActiveCode,
+      activeCount,
+    }}>
+      {children}
+    </FilterCtx.Provider>
+  );
+}
+const useFilters = () => React.useContext(FilterCtx);
+
+/* ============================================================
+   PRIMITIVES
+   ============================================================ */
+
+function ScoreCell({ s, n, na, big, style }) {
+  if (na || s == null) return <div className="scell na" style={style}>—</div>;
+  const b = bandOf(s);
+  return (
+    <div className={`scell ${b}`} style={{ minWidth: big ? 46 : 36, padding: big ? "4px 8px" : "3px 6px", ...style }}>
+      <span className="mono" style={{ fontSize: big ? 12.5 : 11.5 }}>{s.toFixed(1)}</span>
+      {n != null && <span className="n mono">n={n}</span>}
+    </div>
+  );
+}
+
+function BandTag({ s, label }) {
+  const b = bandOf(s);
+  return <span className={`band ${b}`}>{label || BANDS[b].label}</span>;
+}
+
+function Bar({ value, max=5, color, width="100%", height=10, label }) {
+  const pct = Math.max(0, Math.min(1, value/max)) * 100;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, width }}>
+      <div style={{ flex: 1, position: "relative", height, background: "#F1F3F8", borderRadius: 4, overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: color, borderRadius: 4 }} />
+      </div>
+      {label && <span className="mono" style={{ fontSize: 11, fontWeight: 600, color: "#1A1A2E", minWidth: 26, textAlign: "right" }}>{label}</span>}
+    </div>
+  );
+}
+
+function ScoreBar({ value, max=5, label, height=12 }) {
+  const c = bandColor(value);
+  const pct = Math.max(0, Math.min(1, value/max)) * 100;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ flex: 1, position: "relative", height, background: "#F1F3F8", borderRadius: 4, overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: c.fill, borderRadius: 4 }} />
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, borderRight: `2px solid ${c.text}`, opacity: 0.55, borderRadius: 4 }} />
+      </div>
+      {label != null && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: c.text, minWidth: 28, textAlign: "right" }}>{label}</span>}
+    </div>
+  );
+}
+
+function KPI({ label, value, unit, sub, accent, trend }) {
+  return (
+    <div className="kpi">
+      <div className="accent-bar" style={{ background: accent || "var(--primary)" }} />
+      <div className="lbl">{label}</div>
+      <div className="val mono">
+        {value}{unit && <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-3)", marginLeft: 3 }}>{unit}</span>}
+      </div>
+      {(sub || trend) && (
+        <div className="delta">
+          {trend && (
+            trend.dir === "up"
+              ? <span className="up">▲ {trend.value}</span>
+              : <span className="dn">▼ {trend.value}</span>
+          )}
+          {sub && <span style={{ color: "var(--ink-3)" }}>{sub}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LegendStrip() {
+  return (
+    <div className="legend">
+      <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "var(--ink-3)", textTransform: "uppercase" }}>Score band</span>
+      <span className="item"><span className="swatch" style={{ background: "#C8E6C9" }} /> Excellent ≥ 4.6</span>
+      <span className="item"><span className="swatch" style={{ background: "#DCEDC8" }} /> Good 3.6–4.5</span>
+      <span className="item"><span className="swatch" style={{ background: "#FFE0B2" }} /> Moderate 2.6–3.5</span>
+      <span className="item"><span className="swatch" style={{ background: "#FFCDD2" }} /> Poor ≤ 2.5</span>
+    </div>
+  );
+}
+
+function CardHead({ title, sub, right }) {
+  return (
+    <div className="card-header">
+      <div>
+        <h3>{title}</h3>
+        {sub && <div className="sub">{sub}</div>}
+      </div>
+      {right && <div className="right">{right}</div>}
+    </div>
+  );
+}
+
+/* ============================================================
+   HEADER + TAB STRIP + FILTER BAR
+   ============================================================ */
+
+function Header({ active }) {
+  const titles = {
+    1: { crumb: "Programme · Portfolio",  title: "Impact Dashboard" },
+    2: { crumb: "OECD-DAC · Indicators", title: "Parameter Scoring" },
+    3: { crumb: "OECD-DAC · Criteria",   title: "OECD Analysis" },
+    4: { crumb: "Geography · States",    title: "State-wise Analysis" },
+    5: { crumb: "Operations · Delivery", title: "Project Performance" },
+  };
+  const t = titles[active] || titles[1];
+  return (
+    <div className="header">
+      <div className="page-title">
+        <span className="crumb">{t.crumb}</span>
+        <h1>{t.title}</h1>
+      </div>
+      <div className="header-right">
+        <div className="meta-chip"><span className="live-dot" /><span className="lbl">Data</span><span className="val">Live · last sync 09:42</span></div>
+        <div className="meta-chip"><span className="lbl">Source</span><span className="val">DMS v2 · OECD-DAC</span></div>
+        <div className="meta-chip"><span className="lbl">FY</span><span className="val">2025–26</span></div>
+      </div>
+    </div>
+  );
+}
+
+const TABS = [
+  { id: 1, label: "Impact Dashboard" },
+  { id: 2, label: "Parameter Scoring" },
+  { id: 3, label: "OECD Analysis" },
+  { id: 4, label: "State-wise Analysis" },
+  { id: 5, label: "Project Performance" },
+];
+
+function VNav({ active, onChange }) {
+  const f = useFilters();
+  const avg = f.filteredProjects.length
+    ? (f.filteredProjects.reduce((s,p)=>s+p.score,0) / f.filteredProjects.length).toFixed(2)
+    : "—";
+  return (
+    <div className="vnav">
+      <div className="vnav-brand">
+        <div className="logo-mark">P</div>
+        <div className="txt">
+          <strong>PARIVARTAN</strong>
+          <span>IMPACT INTEL</span>
+        </div>
+      </div>
+      <div className="vnav-section">Reports</div>
+      <div className="vnav-items">
+        {TABS.map(t => (
+          <div key={t.id}
+               className={`vnav-item ${active === t.id ? "active" : ""}`}
+               onClick={() => onChange(t.id)}>
+            <span className="num">{String(t.id).padStart(2,"0")}</span>
+            <span>{t.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="vnav-foot">
+        <strong>Portfolio Snapshot</strong>
+        <div>{f.filteredProjects.length} of {PROJECTS.length} projects · avg <span style={{ color: "var(--brand-accent)", fontWeight: 600 }}>{avg}</span></div>
+        <div style={{ marginTop: 6 }}>{f.filters.fy} · Dhwani RIS</div>
+      </div>
+    </div>
+  );
+}
+
+function FilterBar() {
+  const f = useFilters();
+  const fmt = (label, arr) => {
+    if (arr.length === 0) return "All";
+    if (arr.length === 1) return arr[0];
+    return `${arr.length} selected`;
+  };
+
+  return (
+    <div className="filterbar">
+      <span className="filter-label">Filters</span>
+
+      <Slicer label="State"
+        display={fmt("State", f.filters.states)}
+        active={f.filters.states.length > 0}
+        options={ALL_STATES}
+        selected={f.filters.states}
+        multi
+        onToggle={v => f.toggle("states", v)}
+        onClear={() => f.clear("states")} />
+
+      <Slicer label="Financial Year"
+        display={f.filters.fy.replace("FY ", "")}
+        active={f.filters.fy !== DEFAULT_FILTERS.fy}
+        options={ALL_FYS}
+        selected={f.filters.fy}
+        radio
+        onToggle={v => f.setSingle("fy", v)} />
+
+      <Slicer label="Thematic Area"
+        display={fmt("Theme", f.filters.themes)}
+        active={f.filters.themes.length > 0}
+        options={ALL_THEMES}
+        selected={f.filters.themes}
+        multi
+        onToggle={v => f.toggle("themes", v)}
+        onClear={() => f.clear("themes")} />
+
+      <Slicer label="Intervention"
+        display={fmt("Intervention", f.filters.interventions)}
+        active={f.filters.interventions.length > 0}
+        options={ALL_INTERVENTIONS}
+        selected={f.filters.interventions}
+        multi
+        onToggle={v => f.toggle("interventions", v)}
+        onClear={() => f.clear("interventions")} />
+
+      <Slicer label="Project Code"
+        display={fmt("Project", f.filters.codes)}
+        active={f.filters.codes.length > 0}
+        options={ALL_CODES}
+        selected={f.filters.codes}
+        multi
+        onToggle={v => f.toggle("codes", v)}
+        onClear={() => f.clear("codes")} />
+
+      <Slicer label="Partner"
+        display={fmt("Partner", f.filters.partners)}
+        active={f.filters.partners.length > 0}
+        options={ALL_PARTNERS}
+        selected={f.filters.partners}
+        multi
+        onToggle={v => f.toggle("partners", v)}
+        onClear={() => f.clear("partners")} />
+
+      <button className="reset-btn" onClick={f.reset}>↺ Reset{f.activeCount > 0 ? ` (${f.activeCount})` : ""}</button>
+      <span className="filter-count" style={{ marginLeft: 10 }}>
+        <strong style={{ color: "var(--ink-1)" }}>{f.filteredProjects.length}</strong> of {PROJECTS.length} projects shown
+      </span>
+    </div>
+  );
+}
+
+function Slicer({ label, display, active, options, selected, multi, radio, onToggle, onClear }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e) => {
+      if (wrap.current && !wrap.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  const isSel = (opt) => multi ? selected.includes(opt) : selected === opt;
+
+  return (
+    <div className="slicer-wrap" ref={wrap}>
+      <div className={`slicer ${active || open ? "active" : ""}`}
+           onClick={() => setOpen(o => !o)}>
+        <span className="k">{label}</span>
+        <span className="v">{display}</span>
+        <span className="caret">{open ? "▴" : "▾"}</span>
+      </div>
+      {open && (
+        <div className="dropdown">
+          <div className="dd-header">
+            <span>{label}{multi ? ` · ${selected.length}/${options.length}` : ""}</span>
+            {multi && selected.length > 0 && (
+              <span className="dd-link" onClick={(e) => { e.stopPropagation(); onClear(); }}>Clear</span>
+            )}
+          </div>
+          <div className="dd-scroll">
+            {multi && (
+              <div className={`dd-opt ${selected.length === 0 ? "selected" : ""}`}
+                   onClick={() => onClear()}>
+                <span className="check">{selected.length === 0 ? "✓" : ""}</span>
+                <span>All {label.toLowerCase()}s</span>
+              </div>
+            )}
+            {options.map(opt => {
+              const sel = isSel(opt);
+              return (
+                <div key={opt}
+                     className={`dd-opt ${radio ? "radio" : ""} ${sel ? "selected" : ""}`}
+                     onClick={() => { onToggle(opt); if (radio) setOpen(false); }}>
+                  <span className="check">{sel ? (radio ? "●" : "✓") : ""}</span>
+                  <span>{opt}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Footer({ tab }) {
+  return (
+    <div className="canvas-foot">
+      <div className="left">
+        <span><strong style={{color: "var(--ink-1)"}}>Parivartan</strong> CSR · Impact Dashboard</span>
+        <span>·</span>
+        <span>Page {tab} of 5</span>
+        <span>·</span>
+        <span>OECD-DAC framework · weighted scoring v2</span>
+      </div>
+      <div className="right">
+        <span>Score scale 1.0 – 5.0</span>
+        <span>·</span>
+        <span>Prepared by Dhwani RIS</span>
+        <span>·</span>
+        <span>Confidential — Internal</span>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB 1 — IMPACT DASHBOARD
+   ============================================================ */
+
+function Tab1() {
+  const f = useFilters();
+  const fp = f.filteredProjects;
+  const avg = fp.length ? (fp.reduce((s,p)=>s+p.score,0)/fp.length) : 0;
+  const hrdpCount = fp.filter(p => p.type === "HRDP").length;
+  const fdpCount = fp.filter(p => p.type === "FDP").length;
+  const totalBudget = fp.reduce((s,p)=>s+p.budget,0);
+  const avgBudget = fp.length ? totalBudget / fp.length : 0;
+
+  const kpis = [
+    { label: "Total Projects",     value: String(fp.length), sub: fp.length === PROJECTS.length ? "Active across portfolio" : `Filtered from ${PROJECTS.length}`, accent: "var(--primary)" },
+    { label: "HRDP Projects",      value: String(hrdpCount), sub: "Multi-theme integrated",      accent: "#0E8388" },
+    { label: "FDP Projects",       value: String(fdpCount),  sub: "Single-theme focused",        accent: "#C9711F" },
+    { label: "Total Budget",       value: `₹${totalBudget.toFixed(1)}`, unit: "Cr",  sub: `FY 2025–26 · ${fp.length} project${fp.length===1?"":"s"}`, accent: "var(--secondary)" },
+    { label: "Budget / Project",   value: `₹${avgBudget.toFixed(2)}`, unit: "Cr", sub: fp.length ? `Median ₹${[...fp].sort((a,b)=>a.budget-b.budget)[Math.floor(fp.length/2)].budget.toFixed(2)} Cr` : "—", accent: "#6D4C41" },
+  ];
+
+  // Compute filtered tool averages only when projects are filtered;
+  // at the unfiltered baseline use the briefed programme-level tool scores verbatim.
+  const baseTool = { PoE: 3.28, "H&H": 3.45, SDLE: 3.71, NRM: 3.82 };
+  const filteredToolAvg = (toolKey) => {
+    if (fp.length === PROJECTS.length) return baseTool[toolKey];
+    const idx = { PoE: 0, "H&H": 1, SDLE: 2, NRM: 3 }[toolKey];
+    if (fp.length === 0) return 0;
+    const vals = fp.map(p => STATE_TOOL[p.state]?.v[idx]).filter(v => v != null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
+  };
+
+  const tools = [
+    { tool: "NRM",   score: filteredToolAvg("NRM")  },
+    { tool: "H&H",   score: filteredToolAvg("H&H")  },
+    { tool: "SDLE",  score: filteredToolAvg("SDLE") },
+    { tool: "PoE",   score: filteredToolAvg("PoE")  },
+    { tool: "Overall", score: fp.length === PROJECTS.length ? 3.56 : avg },
+  ];
+
+  // Budget range breakdown: 1–3 Cr / 3–5 Cr / 5–15 Cr with avg score
+  const ranges = [
+    { label: "₹1 – 3 Cr",  min: 1, max: 3 },
+    { label: "₹3 – 5 Cr",  min: 3, max: 5 },
+    { label: "₹5 – 15 Cr", min: 5, max: 15 },
+  ].map(r => {
+    const items = fp.filter(p => p.budget >= r.min && p.budget < r.max);
+    const a = items.length ? items.reduce((s,p)=>s+p.score,0)/items.length : 0;
+    return { ...r, count: items.length, avg: a, budgetSum: items.reduce((s,p)=>s+p.budget,0) };
+  });
+  const maxRangeCount = Math.max(1, ...ranges.map(r=>r.count));
+
+  // % projects by performance category per region (zone)
+  const zoneOrder = ["Central India","South","West","East","North 1","North 2","North East","Pan India"];
+  const regionCats = zoneOrder
+    .map(z => {
+      const items = fp.filter(p => p.zone === z);
+      if (items.length === 0) return null;
+      const e = items.filter(p => bandOf(p.score) === "excellent").length;
+      const g = items.filter(p => bandOf(p.score) === "good").length;
+      const m = items.filter(p => bandOf(p.score) === "moderate").length;
+      const po = items.filter(p => bandOf(p.score) === "poor").length;
+      return { zone: z, total: items.length, e, g, m, po };
+    })
+    .filter(Boolean);
+
+  return (
+    <div className="content-inner">
+      {/* Row 1 — KPI cards (6 cards) */}
+      <div className="row" style={{ height: 68 }}>
+        {kpis.map((k, i) => (
+          <KPI key={i} label={k.label} value={k.value} unit={k.unit} sub={k.sub} accent={k.accent} />
+        ))}
+      </div>
+
+      {/* Row 2 — Score tiles */}
+      <div className="row" style={{ height: 76 }}>
+        {tools.map((t, i) => {
+          const c = bandColor(t.score);
+          const isOverall = t.tool === "Overall";
+          const dim = !isOverall && !f.isActiveTool(t.tool);
+          return (
+            <div key={t.tool} className="card" style={{ flex: 1, padding: "8px 12px", borderTop: `3px solid ${isOverall ? "var(--brand-ink)" : c.text}`, opacity: dim ? 0.4 : 1, transition: "opacity 150ms ease" }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-2)", letterSpacing: "0.04em" }}>
+                  {isOverall ? "PROGRAMME OVERALL" : t.tool.toUpperCase()}
+                </div>
+                <BandTag s={t.score} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+                <span className="mono" style={{ fontSize: 22, fontWeight: 600, color: c.text, lineHeight: 1 }}>{t.score.toFixed(2)}</span>
+                <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>/ 5.0</span>
+              </div>
+              <div style={{ marginTop: 5 }}>
+                <ScoreBar value={t.score} height={5} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Row 3 — HRDP/FDP + Budget range */}
+      <div className="row" style={{ height: 158 }}>
+        <div className="card" style={{ flex: 1.15, padding: "10px 12px" }}>
+          <CardHead title="HRDP vs FDP — Programme Design Comparison"
+            sub={`Avg score per OECD criterion · n=${hrdpCount} HRDP, n=${fdpCount} FDP`}
+            right={<><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, background: "var(--secondary)" }} /> HRDP</span>
+                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, background: "#9B2D3D" }} /> FDP</span></>} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {HRDP_FDP.map(r => (
+              <div key={r.c} style={{ display: "grid", gridTemplateColumns: "86px 1fr 1fr", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 10, color: "var(--ink-2)", fontWeight: 500 }}>{r.c}</span>
+                <Bar value={r.HRDP} color="#003087" height={6} label={r.HRDP.toFixed(1)} />
+                <Bar value={r.FDP}  color="#9B2D3D" height={6} label={r.FDP.toFixed(1)} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card" style={{ flex: 0.85, padding: "10px 12px" }}>
+          <CardHead title="Budget Range Breakdown"
+            sub="Avg score per project tier · grouped by allocated budget"
+            right={<span>n = <strong style={{color: "var(--ink-1)"}}>{fp.length}</strong></span>} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+            {ranges.map(r => {
+              const c = bandColor(r.avg);
+              return (
+                <div key={r.label} style={{ display: "grid", gridTemplateColumns: "82px 26px 1fr 52px", gap: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-1)" }}>{r.label}</span>
+                  <span style={{ fontSize: 10, color: "var(--ink-3)", fontWeight: 600 }}>n={r.count}</span>
+                  <div style={{ position: "relative", height: 18, background: "#F1F3F8", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${r.count/maxRangeCount*100}%`, background: c.fill, borderLeft: `3px solid ${c.text}` }} />
+                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 10, fontWeight: 700, color: c.text, mixBlendMode: "multiply" }}>₹{r.budgetSum.toFixed(1)} Cr</span>
+                  </div>
+                  <span className="mono" style={{ fontSize: 13.5, fontWeight: 700, color: c.text, textAlign: "right" }}>
+                    {r.count > 0 ? r.avg.toFixed(2) : "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 8, lineHeight: 1.3 }}>
+            Bar width = # of projects · Number = avg weighted score (1–5)
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4 — Region Performance + Top 5 + State table */}
+      <div className="row" style={{ flex: 1, minHeight: 0 }}>
+        <div className="card" style={{ flex: 0.9, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Performance Category by Region"
+            sub="% of projects in each band, per zone"
+            right={<span style={{ fontSize: 9.5 }}>{regionCats.length} zones</span>} />
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 5, marginTop: 2, overflow: "hidden" }}>
+            {regionCats.map(r => {
+              const segs = [
+                { k: "Excellent", n: r.e,  bg: BANDS.excellent.fill, fg: BANDS.excellent.text },
+                { k: "Good",      n: r.g,  bg: BANDS.good.fill,      fg: BANDS.good.text },
+                { k: "Moderate",  n: r.m,  bg: BANDS.moderate.fill,  fg: BANDS.moderate.text },
+                { k: "Poor",      n: r.po, bg: BANDS.poor.fill,      fg: BANDS.poor.text },
+              ].filter(s => s.n > 0);
+              return (
+                <div key={r.zone}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--ink-1)" }}>{r.zone}</span>
+                    <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{r.total} project{r.total===1?"":"s"}</span>
+                  </div>
+                  <div style={{ display: "flex", width: "100%", height: 16, borderRadius: 3, overflow: "hidden", background: "#F1F3F8" }}>
+                    {segs.map(s => (
+                      <div key={s.k} style={{ flex: s.n, background: s.bg, color: s.fg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 700 }}>
+                        {Math.round((s.n / r.total) * 100)}%
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {regionCats.length === 0 && (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-3)", fontSize: 11 }}>No projects in current filter</div>
+            )}
+          </div>
+        </div>
+
+        <div className="card" style={{ flex: 0.75, display: "flex", flexDirection: "column", padding: "10px 12px" }}>
+          <CardHead title="Top 5 Projects"
+            sub="Ranked by weighted score" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, minHeight: 0 }}>
+            {fp.slice(0, 5).map(p => (
+              <div key={p.code} style={{ display: "flex", alignItems: "center", gap: 7, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--divider)", background: "#fff", flex: 1, minHeight: 0 }}>
+                <span style={{ width: 20, height: 20, borderRadius: 10, background: "var(--brand-ink)", color: "#fff", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{p.rank}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span className="mono" style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-1)" }}>{p.code}</span>
+                    <span className="pill" style={{ background: p.type === "HRDP" ? "rgba(0,48,135,0.08)" : "rgba(155,45,61,0.08)", color: p.type === "HRDP" ? "#003087" : "#9B2D3D" }}>{p.type}</span>
+                  </div>
+                  <div style={{ fontSize: 9.5, color: "var(--ink-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.partner} · {p.state}</div>
+                </div>
+                <ScoreCell s={p.score} />
+              </div>
+            ))}
+            {fp.length === 0 && (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-3)", fontSize: 11 }}>No projects</div>
+            )}
+          </div>
+        </div>
+
+        <div className="card" style={{ flex: 1.4, display: "flex", flexDirection: "column", padding: "10px 12px" }}>
+          <CardHead title="State-wise Project Performance"
+            sub="Click any row to drill through" right={<LegendStrip />} />
+          <div className="scroll" style={{ flex: 1, marginTop: 2 }}>
+            <table className="matrix">
+              <thead>
+                <tr>
+                  <th>State</th>
+                  <th>Partner</th>
+                  <th>Zone</th>
+                  <th className="num">Type</th>
+                  <th className="num">Budget</th>
+                  <th className="num">Score</th>
+                  <th>Band</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fp.map(p => (
+                  <tr key={p.code} style={{ cursor: "pointer" }}>
+                    <td style={{ fontWeight: 600, color: "var(--ink-1)" }}>{p.state}</td>
+                    <td style={{ color: "var(--ink-2)" }}>{p.partner}</td>
+                    <td style={{ color: "var(--ink-3)" }}>{p.zone}</td>
+                    <td className="num"><span className="pill" style={{ background: p.type === "HRDP" ? "rgba(0,48,135,0.08)" : "rgba(155,45,61,0.08)", color: p.type === "HRDP" ? "#003087" : "#9B2D3D" }}>{p.type}</span></td>
+                    <td className="num mono" style={{ color: "var(--ink-2)" }}>₹{p.budget.toFixed(1)} Cr</td>
+                    <td className="num"><ScoreCell s={p.score} /></td>
+                    <td><BandTag s={p.score} /></td>
+                  </tr>
+                ))}
+                {fp.length === 0 && (
+                  <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-3)", padding: 16 }}>No projects match current filters</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB 2 — PARAMETER SCORING (FULL MATRIX)
+   ============================================================ */
+
+function Tab2() {
+  // Group sub-indicators by criterion in order
+  const rowsByCrit = useMemo(() => {
+    const m = {};
+    SUB_INDICATORS.forEach(r => { (m[r.c] = m[r.c] || []).push(r); });
+    return m;
+  }, []);
+
+  return (
+    <div className="content-inner">
+      {/* Header strip */}
+      <div className="row" style={{ height: 56 }}>
+        <div className="card" style={{ flex: 1, padding: "8px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <CardHead title="Parameter Scoring — Indicator × Tool Matrix"
+            sub="20 OECD-DAC sub-indicators · scores aggregated across 10 projects · cell = avg score with response count (n)"
+            right={<LegendStrip />} />
+        </div>
+        <div className="kpi" style={{ flex: 0.36 }}>
+          <div className="accent-bar" />
+          <div className="lbl">Total responses</div>
+          <div className="val mono">2,578</div>
+          <div className="delta"><span style={{ color: "var(--ink-3)" }}>across 4 tools · 20 indicators</span></div>
+        </div>
+      </div>
+
+      {/* Matrix */}
+      <div className="card" style={{ flex: 1, minHeight: 0, padding: "8px 0 4px 0", display: "flex", flexDirection: "column" }}>
+        <div className="scroll" style={{ flex: 1 }}>
+          <table className="matrix" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
+            <thead>
+              <tr>
+                <th style={{ paddingLeft: 14, width: 124 }}>Criterion</th>
+                <th>Sub-indicator</th>
+                <th className="num" style={{ width: 70 }}>PoE</th>
+                <th className="num" style={{ width: 70 }}>H&H</th>
+                <th className="num" style={{ width: 70 }}>SDLE</th>
+                <th className="num" style={{ width: 70 }}>NRM</th>
+                <th className="num" style={{ width: 80, background: "#EEF1FB", color: "var(--primary)" }}>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CRITERIA.map(c => {
+                const rows = rowsByCrit[c.key] || [];
+                const sub = CRITERION_SUBTOTAL[c.key];
+                const subTotalN = sub.ns.reduce((a,b)=>a+b,0);
+                return (
+                  <React.Fragment key={c.key}>
+                    <tr className="group-header">
+                      <td style={{ paddingLeft: 14, color: c.color }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 2, background: c.color }} />
+                          {c.key.toUpperCase()}
+                        </span>
+                      </td>
+                      <td colSpan={5} style={{ color: "var(--ink-3)", fontWeight: 500 }}>
+                        Weight {c.weight}% · {rows.length} sub-indicator{rows.length>1?"s":""}
+                      </td>
+                      <td className="num" style={{ background: "var(--tint)", color: c.color, fontWeight: 700 }}>{c.weight}%</td>
+                    </tr>
+                    {rows.map((r, i) => (
+                      <tr key={r.n}>
+                        <td style={{ paddingLeft: 14 }}></td>
+                        <td style={{ color: "var(--ink-1)" }}>{r.n}</td>
+                        {[0,1,2,3].map(k => (
+                          <td key={k} className="num"><ScoreCell s={r.v[k]} n={r.ns[k]} /></td>
+                        ))}
+                        <td className="num" style={{ background: "#FAFBFE" }}><ScoreCell s={r.v[4]} n={r.ns.reduce((a,b)=>a+b,0)} /></td>
+                      </tr>
+                    ))}
+                    <tr className="subtotal">
+                      <td style={{ paddingLeft: 14 }}></td>
+                      <td style={{ fontWeight: 700 }}>Total (Avg) — {c.key}</td>
+                      {[0,1,2,3].map(k => (
+                        <td key={k} className="num"><ScoreCell s={sub.v[k]} n={sub.ns[k]} /></td>
+                      ))}
+                      <td className="num" style={{ background: "#EEF1FB" }}><ScoreCell s={sub.v[4]} n={subTotalN} big /></td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
+              <tr className="grand">
+                <td style={{ paddingLeft: 14 }}>PROGRAMME OVERALL</td>
+                <td>Weighted average across all 20 indicators</td>
+                <td className="num"><ScoreCell s={3.28} /></td>
+                <td className="num"><ScoreCell s={3.45} /></td>
+                <td className="num"><ScoreCell s={3.71} /></td>
+                <td className="num"><ScoreCell s={3.82} /></td>
+                <td className="num" style={{ background: "#FFD23F", color: "#1A1A2E" }}>
+                  <div className="scell" style={{ background: "transparent", color: "#1A1A2E" }}>
+                    <span className="mono" style={{ fontSize: 14, fontWeight: 700 }}>3.56</span>
+                    <span className="n">n=2,578</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB 3 — OECD ANALYSIS
+   ============================================================ */
+
+function Gauge({ value, label }) {
+  const pct = Math.max(0, Math.min(1, value/5));
+  const r = 15, cx = 20, cy = 20;
+  const c = bandColor(value);
+  const circ = 2*Math.PI*r * 0.75;
+  const filled = circ * pct;
+  return (
+    <div className="gauge">
+      <svg width="40" height="40" viewBox="0 0 40 40">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#EAEDF4" strokeWidth="4" strokeDasharray={`${circ} 999`} strokeLinecap="round"
+                transform={`rotate(135 ${cx} ${cy})`} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={c.text} strokeWidth="4" strokeDasharray={`${filled} 999`} strokeLinecap="round"
+                transform={`rotate(135 ${cx} ${cy})`} />
+        <text x={cx} y={cy+3} textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 700, fill: c.text }}>{value.toFixed(2)}</text>
+      </svg>
+      <div className="lbl">{label}</div>
+      <BandTag s={value} />
+    </div>
+  );
+}
+
+function Tab3() {
+  const f = useFilters();
+  const fp = f.filteredProjects;
+  return (
+    <div className="content-inner">
+      {/* OECD weight bar */}
+      <div className="card" style={{ height: 84, padding: "8px 14px" }}>
+        <CardHead title="OECD-DAC Weight Distribution"
+          sub={<>Project Score = <span className="mono">W₁·Relevance + W₂·Coherence + W₃·Efficiency + W₄·Effectiveness + W₅·Impact + W₆·Sustainability + W₇·Branding</span></>}
+          right={<><span>Total weight</span><strong style={{ color: "var(--ink-1)" }}>100%</strong></>} />
+        <div style={{ display: "flex", width: "100%", height: 22, borderRadius: 3, overflow: "hidden" }}>
+          {CRITERIA.map(c => (
+            <div key={c.key} style={{ width: `${c.weight}%`, background: c.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700, gap: 6 }}>
+              <span style={{ opacity: 0.85, fontWeight: 600, fontSize: 9.5 }}>{c.key.slice(0,5).toUpperCase()}</span>
+              <span>{c.weight}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Middle row */}
+      <div className="row" style={{ height: 198 }}>
+        {/* Tool x Criterion matrix */}
+        <div className="card" style={{ flex: 1.3, display: "flex", flexDirection: "column", padding: "10px 12px" }}>
+          <CardHead title="Tool × OECD Criterion Heatmap"
+            sub="4 thematic tools × 7 OECD criteria · cells coloured by score band" />
+          <table className="matrix" style={{ marginTop: 2 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>Tool</th>
+                {CRITERIA.map(c => <th key={c.key} className="num" style={{ color: c.color }}>{c.key.slice(0,4).toUpperCase()}</th>)}
+                <th className="num" style={{ background: "#EEF1FB", color: "var(--primary)" }}>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TOOLS.map(t => {
+                const row = TOOL_CRIT[t.key];
+                return (
+                  <tr key={t.key}>
+                    <td style={{ fontWeight: 700, color: t.color, fontSize: 12 }}>{t.key}</td>
+                    {row.map((v, i) => <td key={i} className="num"><ScoreCell s={v} /></td>)}
+                    <td className="num" style={{ background: "#FAFBFE" }}><ScoreCell s={t.score} big /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 4 Gauges */}
+        <div className="card" style={{ flex: 0.7, padding: "8px 10px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Tool-wise Overall Score"
+            sub="Indicator weightage × Σ parameter score" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 2, flex: 1, minHeight: 0, alignItems: "center", justifyItems: "center" }}>
+            {TOOLS.map(t => <Gauge key={t.key} value={t.score} label={t.key} />)}
+          </div>
+        </div>
+
+        {/* Criterion bars */}
+        <div className="card" style={{ flex: 1, padding: "10px 12px" }}>
+          <CardHead title="OECD Criterion — Programme Average"
+            sub="Avg across all tools per criterion" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2 }}>
+            {CRITERIA.map(c => {
+              const vals = TOOLS.map(t => TOOL_CRIT[t.key][CRITERIA.indexOf(c)]);
+              const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+              return (
+                <div key={c.key} style={{ display: "grid", gridTemplateColumns: "78px 1fr", gap: 6, alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: c.color, fontWeight: 700, letterSpacing: "0.02em" }}>{c.key}</span>
+                  <Bar value={avg} color={c.color} height={9} label={avg.toFixed(2)} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom row */}
+      <div className="row" style={{ flex: 1, minHeight: 0 }}>
+        <div className="card" style={{ flex: 1.4, display: "flex", flexDirection: "column", padding: "10px 12px" }}>
+          <CardHead title="All Projects Ranked — Weighted Score"
+            sub="Bars coloured by score band · click bar to drill through" right={<LegendStrip />} />
+          <div className="scroll" style={{ flex: 1, marginTop: 2 }}>
+            <table className="matrix">
+              <thead>
+                <tr>
+                  <th style={{ width: 26 }}>#</th>
+                  <th style={{ width: 60 }}>Code</th>
+                  <th>Partner</th>
+                  <th>State</th>
+                  <th className="num" style={{ width: 56 }}>Budget</th>
+                  <th style={{ width: 260 }}>Score</th>
+                  <th className="num" style={{ width: 70 }}>Band</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fp.map(p => (
+                  <tr key={p.code}>
+                    <td className="mono" style={{ color: "var(--ink-3)" }}>{p.rank}</td>
+                    <td className="mono" style={{ fontWeight: 700 }}>{p.code}</td>
+                    <td>{p.partner}</td>
+                    <td style={{ color: "var(--ink-2)" }}>{p.state}</td>
+                    <td className="num mono" style={{ color: "var(--ink-3)" }}>₹{p.budget.toFixed(1)}Cr</td>
+                    <td><ScoreBar value={p.score} label={p.score.toFixed(1)} height={11} /></td>
+                    <td className="num"><BandTag s={p.score} /></td>
+                  </tr>
+                ))}
+                {fp.length === 0 && (
+                  <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-3)", padding: 16 }}>No projects match current filters</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card" style={{ flex: 0.8, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Weighted Average Summary"
+            sub="Criterion × weight × programme average" />
+          <table className="matrix" style={{ marginTop: 2 }}>
+            <thead>
+              <tr>
+                <th>Criterion</th>
+                <th className="num">Weight</th>
+                <th className="num">Avg</th>
+                <th className="num">Contrib.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CRITERIA.map(c => {
+                const vals = TOOLS.map(t => TOOL_CRIT[t.key][CRITERIA.indexOf(c)]);
+                const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+                const contrib = (avg * c.weight / 100);
+                return (
+                  <tr key={c.key}>
+                    <td style={{ color: c.color, fontWeight: 600 }}>{c.key}</td>
+                    <td className="num mono" style={{ color: "var(--ink-2)" }}>{c.weight}%</td>
+                    <td className="num"><ScoreCell s={avg} /></td>
+                    <td className="num mono" style={{ fontWeight: 700, color: "var(--ink-1)" }}>{contrib.toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+              <tr className="grand">
+                <td>PROGRAMME</td>
+                <td className="num">100%</td>
+                <td className="num"></td>
+                <td className="num mono" style={{ fontSize: 13 }}>3.56</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB 4 — STATE-WISE ANALYSIS
+   ============================================================ */
+
+// Stylised India map: rough polygons positioned for visual recognisability.
+// Coordinates target a 360 wide × 380 tall viewBox.
+const INDIA_STATES = [
+  // path, label coords for centre, name, score
+  { id:"RJ", name:"Rajasthan",      score:3.2, label:"RJ", path:"M70,120 L130,90 L170,110 L175,165 L135,195 L90,180 L65,160 Z", cx:115, cy:145 },
+  { id:"GJ", name:"Gujarat",        score:2.3, label:"GJ", path:"M50,180 L110,180 L125,225 L95,260 L55,245 L40,210 Z", cx:75, cy:215 },
+  { id:"MH", name:"Maharashtra",    score:4.8, label:"MH", path:"M95,255 L180,235 L210,275 L195,320 L120,310 L90,285 Z", cx:140, cy:280 },
+  { id:"MP", name:"Madhya Pradesh", score:4.1, label:"MP", path:"M140,160 L235,150 L255,200 L205,235 L155,230 L130,195 Z", cx:185, cy:195 },
+  { id:"UP", name:"Uttar Pradesh",  score:4.6, label:"UP", path:"M165,90 L260,75 L295,115 L275,155 L210,150 L165,135 Z", cx:225, cy:115 },
+  { id:"BR", name:"Bihar",          score:1.8, label:"BR", path:"M280,105 L335,95 L355,130 L335,160 L290,155 L270,130 Z", cx:310, cy:130 },
+  { id:"JH", name:"Jharkhand",      score:2.8, label:"JH", path:"M275,155 L335,160 L340,195 L305,210 L270,195 Z", cx:305, cy:182 },
+  { id:"OD", name:"Odisha",         score:3.6, label:"OD", path:"M245,205 L305,210 L315,255 L280,275 L240,260 L225,230 Z", cx:270, cy:240 },
+  { id:"KA", name:"Karnataka",      score:3.9, label:"KA", path:"M125,325 L195,320 L215,375 L175,410 L130,400 L115,365 Z", cx:165, cy:365 },
+  { id:"TN", name:"Tamil Nadu",     score:4.5, label:"TN", path:"M180,400 L225,395 L240,455 L210,490 L175,475 L170,430 Z", cx:200, cy:440 },
+  // non-project states (light grey) for context
+  { id:"JK", name:"J&K",            score:null, label:"JK", path:"M95,40 L160,30 L165,80 L120,90 L95,70 Z", cx:130, cy:60 },
+  { id:"PJ", name:"Punjab/HR",      score:null, label:"PB", path:"M125,85 L175,75 L175,115 L130,120 Z", cx:150, cy:100 },
+  { id:"AS", name:"NE States",      score:null, label:"NE", path:"M355,95 L420,85 L430,150 L385,165 L360,130 Z", cx:395, cy:125 },
+  { id:"WB", name:"West Bengal",    score:null, label:"WB", path:"M340,160 L370,155 L375,210 L345,215 Z", cx:360, cy:185 },
+  { id:"AP", name:"Andhra/Tel",     score:null, label:"AP", path:"M205,275 L280,275 L260,340 L215,335 L195,310 Z", cx:235, cy:305 },
+  { id:"KL", name:"Kerala",         score:null, label:"KL", path:"M130,405 L170,410 L175,470 L150,485 L130,455 Z", cx:150, cy:445 },
+  { id:"CG", name:"Chhattisgarh",   score:null, label:"CG", path:"M210,235 L255,230 L260,275 L220,280 Z", cx:235, cy:255 },
+];
+
+function IndiaMap({ activeId, onSelect, dimmer }) {
+  return (
+    <svg viewBox="0 0 460 510" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      {/* Subtle backdrop */}
+      <rect x="0" y="0" width="460" height="510" fill="#F4F6FB" />
+      {/* Title strip */}
+      <text x="14" y="22" style={{ fontSize: 9, fill: "#6B7280", letterSpacing: "0.1em", fontWeight: 700 }}>INDIA · 10 PROJECT STATES HIGHLIGHTED</text>
+
+      {INDIA_STATES.map(s => {
+        const c = s.score == null ? { fill: "#E2E6F0", text: "#9CA3AF" } : bandColor(s.score);
+        const active = s.id === activeId;
+        const dim = dimmer && s.score != null && !dimmer(s.name) ? 0.25 : (s.score == null ? 0.55 : 1);
+        return (
+          <g key={s.id} onClick={() => s.score != null && onSelect && onSelect(s.id)}>
+            <path d={s.path} fill={c.fill} className="map-state"
+                  style={{ stroke: active ? "var(--ink-1)" : "#fff", strokeWidth: active ? 2 : 1.2, opacity: dim }} />
+            {s.score != null && (
+              <g pointerEvents="none" style={{ opacity: dim }}>
+                <circle cx={s.cx} cy={s.cy} r="13" fill="#fff" stroke={c.text} strokeWidth="1.4" />
+                <text x={s.cx} y={s.cy-1} textAnchor="middle" style={{ fontSize: 8, fontWeight: 700, fill: c.text, letterSpacing: "0.04em" }}>{s.label}</text>
+                <text x={s.cx} y={s.cy+9} textAnchor="middle" className="mono" style={{ fontSize: 8.5, fontWeight: 700, fill: c.text }}>{s.score.toFixed(1)}</text>
+              </g>
+            )}
+            {s.score == null && (
+              <text x={s.cx} y={s.cy} textAnchor="middle" style={{ fontSize: 7.5, fill: "#9CA3AF", fontWeight: 600 }}>{s.label}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function Tab4() {
+  const f = useFilters();
+  const [active, setActive] = useState(null);
+  const baseOrder = ["Maharashtra","Uttar Pradesh","Tamil Nadu","Madhya Pradesh","Karnataka","Odisha","Rajasthan","Jharkhand","Gujarat","Bihar"];
+  const stateOrder = baseOrder.filter(s => f.isActiveState(s));
+  const partnersByState = Object.fromEntries(PROJECTS.map(p => [p.state, p.partner]));
+  const zonesByState = Object.fromEntries(PROJECTS.map(p => [p.state, p.zone]));
+
+  return (
+    <div className="content-inner">
+      <div className="row" style={{ flex: 1, minHeight: 0 }}>
+        {/* Left — Map */}
+        <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "10px 12px" }}>
+          <CardHead title="India — State-wise Performance Map"
+            sub="Choropleth coloured by score band · click a state to filter all panels"
+            right={<LegendStrip />} />
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <IndiaMap activeId={active} dimmer={f.isActiveState} onSelect={(id) => setActive(id === active ? null : id)} />
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div className="col" style={{ flex: 1.05, minWidth: 0 }}>
+          {/* State badges 2x5 */}
+          <div className="card" style={{ padding: "10px 12px" }}>
+            <CardHead title="Project States — Snapshot"
+              sub="10 active states · click to drill into project detail" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+              {stateOrder.map(s => {
+                const st = STATE_TOOL[s];
+                return (
+                  <div key={s} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", border: "1px solid var(--divider)", borderRadius: 4 }}>
+                    <div style={{ width: 4, height: 26, background: bandColor(st.overall).text, borderRadius: 2 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-1)" }}>{s}</div>
+                      <div style={{ fontSize: 9.5, color: "var(--ink-3)" }}>{partnersByState[s]} · {zonesByState[s]}</div>
+                    </div>
+                    <ScoreCell s={st.overall} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* State × Tool matrix */}
+          <div className="card" style={{ flex: 1, minHeight: 0, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+            <CardHead title="State × Tool Performance Matrix"
+              sub="Drill path: State → Tool → Intervention → Activity" />
+          <div className="scroll" style={{ flex: 1, marginTop: 2 }}>
+              <table className="matrix">
+                <thead>
+                  <tr>
+                    <th>State</th>
+                    <th>Partner</th>
+                    <th>Zone</th>
+                    <th className="num" style={{ width: 30 }}>Pr</th>
+                    <th className="num" style={{ color: "var(--t-PoE)", width: 48 }}>PoE</th>
+                    <th className="num" style={{ color: "var(--t-HH)", width: 48 }}>H&H</th>
+                    <th className="num" style={{ color: "var(--t-SDLE)", width: 48 }}>SDLE</th>
+                    <th className="num" style={{ color: "var(--t-NRM)", width: 48 }}>NRM</th>
+                    <th className="num" style={{ background: "#EEF1FB", color: "var(--primary)", width: 60 }}>Overall</th>
+                    <th className="num" style={{ width: 76 }}>Band</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stateOrder.map(s => {
+                    const st = STATE_TOOL[s];
+                    return (
+                      <tr key={s}>
+                        <td style={{ fontWeight: 600 }}>{s}</td>
+                        <td style={{ color: "var(--ink-2)" }}>{partnersByState[s]}</td>
+                        <td style={{ color: "var(--ink-3)" }}>{zonesByState[s]}</td>
+                        <td className="num mono" style={{ color: "var(--ink-3)" }}>{st.proj}</td>
+                        {st.v.map((v,i)=> <td key={i} className="num"><ScoreCell s={v} /></td>)}
+                        <td className="num" style={{ background: "#FAFBFE" }}><ScoreCell s={st.overall} big /></td>
+                        <td className="num"><BandTag s={st.overall} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB 5 — PROJECT PERFORMANCE (3 sub-tabs)
+   ============================================================ */
+
+function SubTabs({ active, onChange }) {
+  const items = [
+    { id: "A", label: "Partner-wise" },
+    { id: "B", label: "Regional / Zonal" },
+    { id: "C", label: "Intervention & Budget" },
+  ];
+  return (
+    <div className="subtabs">
+      {items.map((it, i) => (
+        <div key={it.id} className={`subtab ${active===it.id?"active":""}`} onClick={() => onChange(it.id)}>
+          <span className="num">5{it.id}</span>
+          <span>{it.label}</span>
+        </div>
+      ))}
+      <div style={{ flex: 1 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 10.5, color: "var(--ink-3)" }}>
+        <span>Drill-through enabled · right-click any row → Project Detail</span>
+      </div>
+    </div>
+  );
+}
+
+function Tab5A() {
+  const f = useFilters();
+  const fp = f.filteredProjects;
+  const partnersInFilter = new Set(fp.map(p => p.partner));
+  const visiblePartners = PARTNERS.filter(p => partnersInFilter.has(p.p));
+  const top = fp[0];
+  const bot = fp[fp.length-1];
+
+  // Partner summary: name, project code, state, type, budget, overall score (from PARTNERS or project)
+  const partnerSummary = fp.map(p => {
+    const partnerRec = PARTNERS.find(x => x.p === p.partner);
+    return {
+      partner: p.partner,
+      code: p.code,
+      state: p.state,
+      type: p.type,
+      budget: p.budget,
+      score: p.score,
+      branding: partnerRec?.v[6] ?? null,
+      sustainability: partnerRec?.v[5] ?? null,
+      impact: partnerRec?.v[4] ?? null,
+    };
+  });
+
+  return (
+    <>
+      {/* Row 1 — 3 KPIs (Avg Score removed) */}
+      <div className="row" style={{ height: 78 }}>
+        <KPI label="Implementing Partners" value={String(partnersInFilter.size)} sub={partnersInFilter.size === PARTNERS.length ? "All active NGO partners" : `Filtered from ${PARTNERS.length}`} accent="var(--secondary)" />
+        <KPI label="Top Performer" value={top ? top.partner : "—"} sub={top ? `${top.state} · Score ${top.score.toFixed(2)} · ${BANDS[bandOf(top.score)].label}` : "—"} accent="#1B5E20" />
+        <KPI label="Lowest Performer" value={bot && bot !== top ? bot.partner : "—"} sub={bot && bot !== top ? `${bot.state} · Score ${bot.score.toFixed(2)} · ${BANDS[bandOf(bot.score)].label}` : "—"} accent="#B71C1C" />
+      </div>
+
+      {/* Row 2 — Partner summary table + ranked project bars */}
+      <div className="row" style={{ flex: 1, minHeight: 0 }}>
+        <div className="card" style={{ flex: 1.15, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Partner Performance Summary"
+            sub={`${visiblePartners.length} active partner${visiblePartners.length===1?"":"s"} · click row to drill to project detail`}
+            right={<LegendStrip />} />
+          <div className="scroll" style={{ flex: 1, marginTop: 2 }}>
+            <table className="matrix">
+              <thead>
+                <tr>
+                  <th style={{ width: 22 }}>#</th>
+                  <th>Partner</th>
+                  <th>Project</th>
+                  <th>State</th>
+                  <th className="num">Type</th>
+                  <th className="num">Budget</th>
+                  <th className="num" style={{ color: "var(--c-impact)" }}>Impact</th>
+                  <th className="num" style={{ color: "var(--c-sustainability)" }}>Sust.</th>
+                  <th className="num" style={{ background: "#EEF1FB", color: "var(--primary)" }}>Overall</th>
+                  <th className="num">Band</th>
+                </tr>
+              </thead>
+              <tbody>
+                {partnerSummary.map((p, i) => (
+                  <tr key={p.code} style={{ cursor: "pointer" }}>
+                    <td className="mono" style={{ color: "var(--ink-3)" }}>{i+1}</td>
+                    <td style={{ fontWeight: 600 }}>{p.partner}</td>
+                    <td className="mono" style={{ fontWeight: 700, color: "var(--ink-1)" }}>{p.code}</td>
+                    <td style={{ color: "var(--ink-2)" }}>{p.state}</td>
+                    <td className="num"><span className="pill" style={{ background: p.type === "HRDP" ? "rgba(0,48,135,0.08)" : "rgba(155,45,61,0.08)", color: p.type === "HRDP" ? "#003087" : "#9B2D3D" }}>{p.type}</span></td>
+                    <td className="num mono" style={{ color: "var(--ink-3)" }}>₹{p.budget.toFixed(1)}Cr</td>
+                    <td className="num"><ScoreCell s={p.impact} /></td>
+                    <td className="num"><ScoreCell s={p.sustainability} /></td>
+                    <td className="num" style={{ background: "#FAFBFE" }}><ScoreCell s={p.score} big /></td>
+                    <td className="num"><BandTag s={p.score} /></td>
+                  </tr>
+                ))}
+                {partnerSummary.length === 0 && (
+                  <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--ink-3)", padding: 16 }}>No partners match current filters</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card" style={{ flex: 0.85, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Top Performing Projects" sub={`${fp.length} project${fp.length===1?"":"s"} ranked · bars coloured by band`} />
+          <div className="scroll" style={{ flex: 1, marginTop: 2 }}>
+            <table className="matrix">
+              <thead>
+                <tr><th style={{width: 22}}>#</th><th>Code</th><th>Partner</th><th style={{ width: 180 }}>Score</th><th className="num">Band</th></tr>
+              </thead>
+              <tbody>
+                {fp.map((p, i) => (
+                  <tr key={p.code}>
+                    <td className="mono" style={{ color: "var(--ink-3)" }}>{i+1}</td>
+                    <td className="mono" style={{ fontWeight: 700 }}>{p.code}</td>
+                    <td>{p.partner}</td>
+                    <td><ScoreBar value={p.score} label={p.score.toFixed(1)} height={10} /></td>
+                    <td className="num"><BandTag s={p.score} /></td>
+                  </tr>
+                ))}
+                {fp.length === 0 && (
+                  <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--ink-3)", padding: 16 }}>No projects</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Tab5B() {
+  const f = useFilters();
+  const [view, setView] = useState("region"); // "region" or "zone"
+  const fp = f.filteredProjects;
+
+  // Build view groups
+  const regionGroups = ZONES.map(z => {
+    const projs = fp.filter(p => p.zone === z.zone);
+    const avg = projs.length ? projs.reduce((s,p)=>s+p.score,0)/projs.length : null;
+    return { key: z.zone, label: z.zone, tier: z.tier, v: z.v, projCount: projs.length, projs, avg };
+  });
+
+  // Aggregate ZONES by tier for zonal view
+  const zoneGroups = ["Zone 1","Zone 2","Zone 3"].map(t => {
+    const subs = ZONES.filter(z => z.tier === t);
+    const subsWithData = subs.filter(z => z.v != null);
+    const v = subsWithData.length ? {
+      NRM:   subsWithData.reduce((s,z)=>s+z.v.NRM,0)/subsWithData.length,
+      "H&H": subsWithData.reduce((s,z)=>s+z.v["H&H"],0)/subsWithData.length,
+      SDLE:  subsWithData.reduce((s,z)=>s+z.v.SDLE,0)/subsWithData.length,
+      PoE:   subsWithData.reduce((s,z)=>s+z.v.PoE,0)/subsWithData.length,
+    } : null;
+    const projs = fp.filter(p => subs.some(z => z.zone === p.zone));
+    const avg = projs.length ? projs.reduce((s,p)=>s+p.score,0)/projs.length : null;
+    const memberLabels = subs.map(z => z.zone).join(" · ");
+    return { key: t, label: t, tier: t, v, projCount: projs.length, projs, avg, members: memberLabels, memberCount: subs.length };
+  });
+
+  const groups = view === "region" ? regionGroups : zoneGroups;
+  const groupsWithData = groups.filter(g => g.v != null);
+  const groupsWithProj = groups.filter(g => g.avg != null);
+
+  // Top/Spread KPIs derived from current view's groups
+  const sortedByAvg = [...groupsWithProj].sort((a,b) => b.avg - a.avg);
+  const topG = sortedByAvg[0];
+  const botG = sortedByAvg[sortedByAvg.length-1];
+  const spread = topG && botG ? (topG.avg - botG.avg) : 0;
+
+  const ViewToggle = (
+    <div style={{ display: "inline-flex", border: "1px solid var(--divider)", borderRadius: 6, padding: 2, background: "#F4F6FB" }}>
+      {[{id:"region", lbl:"By Region", n: regionGroups.length}, {id:"zone", lbl:"By Zone", n: 3}].map(opt => (
+        <div key={opt.id}
+             onClick={() => setView(opt.id)}
+             style={{
+               padding: "5px 12px",
+               borderRadius: 4,
+               fontSize: 11,
+               fontWeight: 600,
+               cursor: "pointer",
+               background: view === opt.id ? "#fff" : "transparent",
+               color: view === opt.id ? "var(--brand-ink)" : "var(--ink-3)",
+               boxShadow: view === opt.id ? "0 1px 2px rgba(15,24,48,0.08), 0 0 0 1px rgba(15,24,48,0.04)" : "none",
+               display: "inline-flex", alignItems: "center", gap: 6,
+               transition: "all 120ms ease",
+               userSelect: "none",
+             }}>
+          <span>{opt.lbl}</span>
+          <span style={{ fontSize: 9.5, opacity: 0.6, fontWeight: 500 }}>{opt.n}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <>
+      {/* Row 1 — View toggle + 3 KPIs */}
+      <div className="row" style={{ height: 78 }}>
+        <div className="card" style={{ flex: 1.25, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 9.5, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>Aggregation View</div>
+              <div style={{ fontSize: 11, color: "var(--ink-2)", marginTop: 3, lineHeight: 1.3 }}>
+                {view === "region"
+                  ? <>Showing all <strong style={{color:"var(--ink-1)"}}>{regionGroups.length} geographic regions</strong> · click <em>By Zone</em> to roll up by HDFC tier</>
+                  : <>Showing <strong style={{color:"var(--ink-1)"}}>3 zone tiers</strong> · click <em>By Region</em> to see member zones individually</>}
+              </div>
+            </div>
+            {ViewToggle}
+          </div>
+          {view === "zone" && (
+            <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 9.5, color: "var(--ink-3)", flexWrap: "wrap" }}>
+              {zoneGroups.map(z => (
+                <span key={z.key}>
+                  <strong style={{ color: "var(--brand-ink)" }}>{z.label}:</strong>{" "}
+                  <span>{z.members}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <KPI label={view === "region" ? "Top Region" : "Top Zone"} value={topG ? topG.label : "—"} sub={topG ? `Avg ${topG.avg.toFixed(2)} · ${topG.projCount} project${topG.projCount===1?"":"s"}${view === "region" ? " · " + topG.tier : ""}` : "—"} accent={topG ? bandColor(topG.avg).text : "var(--primary)"} />
+        <KPI label="Spread (max − min)" value={spread.toFixed(2)} sub={topG && botG ? `${topG.label} ${topG.avg.toFixed(2)} → ${botG.label} ${botG.avg.toFixed(2)}` : "—"} accent="#6D4C41" />
+      </div>
+
+      {/* Row 2 — Clustered bar chart + region/zone cards */}
+      <div className="row" style={{ flex: 1, minHeight: 0 }}>
+        {/* Clustered bar chart */}
+        <div className="card" style={{ flex: 1.3, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title={view === "region" ? "Regional Performance — Tool Comparison" : "Zonal Performance — Tool Comparison"}
+            sub={`4 thematic tools × ${groupsWithData.length} ${view === "region" ? "regions" : "zone tiers"} · clustered bars (0–5)`}
+            right={<><span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-NRM)" }} /> NRM</span>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-HH)" }} /> H&H</span>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-SDLE)" }} /> SDLE</span>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-PoE)" }} /> PoE</span></>} />
+          <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "flex-end", justifyContent: "space-around", padding: "8px 6px 36px 28px", position: "relative" }}>
+            {/* Y axis grid */}
+            <div style={{ position: "absolute", left: 0, right: 0, top: 12, bottom: 36, pointerEvents: "none" }}>
+              {[1,2,3,4,5].map(y => (
+                <div key={y} style={{ position: "absolute", left: 22, right: 6, top: `${100 - y*20}%`, borderTop: "1px dashed #E5E7EB", height: 1 }}>
+                  <span style={{ position: "absolute", left: -18, top: -7, fontSize: 9, color: "var(--ink-3)" }}>{y}</span>
+                </div>
+              ))}
+            </div>
+            {groupsWithData.map(g => (
+              <div key={g.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", height: "100%", minWidth: 0 }}>
+                <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: view === "zone" ? 5 : 2, width: "100%", justifyContent: "center", paddingBottom: 4 }}>
+                  {["NRM","H&H","SDLE","PoE"].map(k => {
+                    const v = g.v[k];
+                    const dim = !f.isActiveTool(k);
+                    const color = { NRM: "var(--t-NRM)", "H&H": "var(--t-HH)", SDLE: "var(--t-SDLE)", PoE: "var(--t-PoE)" }[k];
+                    return (
+                      <div key={k} style={{ width: view === "zone" ? 22 : 12, height: `${v/5*100}%`, background: color, borderRadius: "2px 2px 0 0", position: "relative", opacity: dim ? 0.25 : 1 }}>
+                        <span className="mono" style={{ position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)", fontSize: 9, color: "var(--ink-1)", fontWeight: 700 }}>{v.toFixed(1)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-1)", whiteSpace: "nowrap" }}>{g.label}</div>
+                <div style={{ fontSize: 8.5, color: "var(--ink-3)", display: "flex", gap: 4, alignItems: "center" }}>
+                  {view === "region" && (
+                    <span className="pill" style={{ background: g.tier === "Zone 1" ? "rgba(27,94,32,0.10)" : g.tier === "Zone 2" ? "rgba(230,81,0,0.10)" : "rgba(183,28,28,0.10)", color: g.tier === "Zone 1" ? BANDS.excellent.text : g.tier === "Zone 2" ? BANDS.moderate.text : BANDS.poor.text, fontSize: 8.5 }}>{g.tier}</span>
+                  )}
+                  <span>{g.projCount}p</span>
+                </div>
+              </div>
+            ))}
+            {groupsWithData.length === 0 && (
+              <div style={{ width: "100%", textAlign: "center", color: "var(--ink-3)", fontSize: 11 }}>No data for this view</div>
+            )}
+          </div>
+        </div>
+
+        {/* Top projects by region/zone */}
+        <div className="card" style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title={view === "region" ? "Projects by Region" : "Projects by Zone Tier"}
+            sub={view === "region" ? "Grouped by region · tier classification shown · sorted by score" : "Grouped by HDFC zone tier · member regions shown · sorted by score"} />
+          <div className="scroll" style={{ flex: 1, marginTop: 2 }}>
+            {groups.map(g => {
+              const tierColor = g.tier === "Zone 1" ? BANDS.excellent.text : g.tier === "Zone 2" ? BANDS.moderate.text : BANDS.poor.text;
+              const items = view === "region"
+                ? fp.filter(p => p.zone === g.key)
+                : fp.filter(p => ZONES.filter(z => z.tier === g.key).some(z => z.zone === p.zone));
+              return (
+                <div key={g.key} style={{ marginBottom: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 6px", background: "var(--tint)", borderRadius: 3, marginBottom: 3 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)", letterSpacing: "0.06em" }}>{g.label.toUpperCase()}</span>
+                    {view === "region"
+                      ? <span className="pill" style={{ background: "#fff", color: tierColor, border: `1px solid ${tierColor}`, fontSize: 8.5 }}>{g.tier}</span>
+                      : <span style={{ fontSize: 9, color: "var(--ink-3)", fontStyle: "italic" }}>{g.members}</span>
+                    }
+                    <span style={{ fontSize: 9, color: "var(--ink-3)", marginLeft: "auto" }}>{items.length} project{items.length===1?"":"s"}</span>
+                  </div>
+                  {items.length === 0 && (
+                    <div style={{ fontSize: 9.5, color: "var(--ink-3)", padding: "3px 8px", fontStyle: "italic" }}>No active projects</div>
+                  )}
+                  {items.map(p => (
+                    <div key={p.code} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderBottom: "1px solid var(--divider)" }}>
+                      <span className="mono" style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-1)", width: 38 }}>{p.code}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--ink-1)" }}>{p.partner}</div>
+                        <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{p.state} · ₹{p.budget.toFixed(1)} Cr{view === "zone" ? " · " + p.zone : ""}</div>
+                      </div>
+                      <ScoreCell s={p.score} />
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Tab5C() {
+  const f = useFilters();
+  const fp = f.filteredProjects;
+  const fi = f.filteredInterventions;
+
+  // Theme aggregates from interventions
+  const byTool = ["NRM","H&H","SDLE","PoE"].map(t => {
+    const items = INTERVENTIONS.filter(i => i.tool === t);
+    const avg = items.length ? items.reduce((s,i)=>s+i.score,0)/items.length : 0;
+    return { tool: t, count: items.length, avg };
+  });
+  byTool.sort((a,b) => b.avg - a.avg);
+  const strongestTheme = byTool[0];
+  const topIntervention = [...INTERVENTIONS].sort((a,b)=>b.score-a.score)[0];
+  const weakestIntervention = [...INTERVENTIONS].sort((a,b)=>a.score-b.score)[0];
+
+  // Pearson correlation: budget vs score
+  const corr = (() => {
+    if (fp.length < 2) return 0;
+    const xs = fp.map(p => p.budget), ys = fp.map(p => p.score);
+    const n = xs.length;
+    const mx = xs.reduce((a,b)=>a+b,0)/n;
+    const my = ys.reduce((a,b)=>a+b,0)/n;
+    let num = 0, dx = 0, dy = 0;
+    for (let i=0; i<n; i++) {
+      num += (xs[i]-mx)*(ys[i]-my);
+      dx += (xs[i]-mx)**2;
+      dy += (ys[i]-my)**2;
+    }
+    return num / Math.sqrt(dx*dy);
+  })();
+
+  // Scatter: budget vs score
+  const xMin = 1.5, xMax = 8.5, yMin = 1.5, yMax = 5.0;
+  return (
+    <>
+      <div className="row" style={{ height: 78 }}>
+        <KPI label="Total Interventions" value={String(INTERVENTIONS.length)} sub={`Across ${[...new Set(INTERVENTIONS.map(i=>i.tool))].length} thematic tools`} accent="var(--secondary)" />
+        <KPI label="Top Intervention" value={topIntervention.name} sub={`${topIntervention.tool} · Score ${topIntervention.score.toFixed(2)} · ${BANDS[bandOf(topIntervention.score)].label}`} accent={BANDS.good.text} />
+        <KPI label="Strongest Theme" value={strongestTheme.tool} sub={`Avg ${strongestTheme.avg.toFixed(2)} across ${strongestTheme.count} intervention${strongestTheme.count===1?"":"s"}`} accent="#0E8388" />
+        <KPI label="Budget–Score Correlation" value={(corr >= 0 ? "+" : "") + corr.toFixed(2)} sub={Math.abs(corr) > 0.7 ? "Strong positive · budget tracks impact" : Math.abs(corr) > 0.4 ? "Moderate correlation" : "Weak correlation"} accent="#6D4C41" />
+      </div>
+
+      <div className="row" style={{ flex: 1, minHeight: 0 }}>
+        {/* Intervention ranking */}
+        <div className="card" style={{ flex: 1.1, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Intervention Performance Ranking"
+            sub={`${fi.length} intervention${fi.length===1?"":"s"} ranked by score · bar colour by parent tool`}
+            right={<><span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-NRM)" }} /> NRM</span>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-HH)" }} /> H&H</span>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-SDLE)" }} /> SDLE</span>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><span style={{ width:8, height:8, background:"var(--t-PoE)" }} /> PoE</span></>} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, marginTop: 2, overflow: "hidden" }}>
+            {fi.map((it, i) => {
+              const toolColor = { NRM: "var(--t-NRM)", "H&H": "var(--t-HH)", SDLE: "var(--t-SDLE)", PoE: "var(--t-PoE)" }[it.tool];
+              const toolClass = it.tool === "H&H" ? "HH" : it.tool;
+              return (
+                <div key={it.name} style={{ display: "grid", gridTemplateColumns: "18px 140px 50px 1fr 36px", gap: 6, alignItems: "center" }}>
+                  <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{i+1}</span>
+                  <span style={{ fontSize: 11, color: "var(--ink-1)", fontWeight: 500 }}>{it.name}</span>
+                  <span className={`tool-tag ${toolClass}`}>{it.tool}</span>
+                  <Bar value={it.score} color={toolColor} height={9} />
+                  <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-1)", textAlign: "right" }}>{it.score.toFixed(1)}</span>
+                </div>
+              );
+            })}
+            {fi.length === 0 && (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-3)", fontSize: 11 }}>No interventions match current filters</div>
+            )}
+          </div>
+        </div>
+
+        {/* Budget vs Score scatter */}
+        <div className="card" style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column" }}>
+          <CardHead title="Budget vs Score Scatter"
+            sub="X = Budget (₹ Cr) · Y = Score · point = project · trend line in grey" />
+          <div style={{ flex: 1, position: "relative", padding: "16px 8px 24px 30px" }}>
+            <svg width="100%" height="100%" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ overflow: "visible" }}>
+              {/* grid */}
+              {[1,2,3,4,5].map(y => {
+                const yy = 200 - (y - yMin)/(yMax - yMin) * 200;
+                return (
+                  <g key={y}>
+                    <line x1="0" y1={yy} x2="320" y2={yy} stroke="#E5E7EB" strokeDasharray="3 3" />
+                    <text x="-4" y={yy+3} textAnchor="end" style={{ fontSize: 9, fill: "#6B7280" }}>{y}</text>
+                  </g>
+                );
+              })}
+              {[2,4,6,8].map(x => {
+                const xx = (x - xMin)/(xMax - xMin) * 320;
+                return (
+                  <g key={x}>
+                    <line x1={xx} y1="0" x2={xx} y2="200" stroke="#F1F3F8" />
+                    <text x={xx} y="214" textAnchor="middle" style={{ fontSize: 9, fill: "#6B7280" }}>₹{x}Cr</text>
+                  </g>
+                );
+              })}
+              {/* trend line — slope positive (higher budget → higher score roughly) */}
+              {fp.length >= 2 && (() => {
+                const xs = fp.map(p => p.budget), ys = fp.map(p => p.score);
+                const n = xs.length;
+                const mx = xs.reduce((a,b)=>a+b,0)/n;
+                const my = ys.reduce((a,b)=>a+b,0)/n;
+                const num = xs.reduce((s,x,i)=> s + (x-mx)*(ys[i]-my), 0);
+                const den = xs.reduce((s,x)=> s + (x-mx)*(x-mx), 0);
+                if (den === 0) return null;
+                const slope = num/den;
+                const intercept = my - slope*mx;
+                const x1 = xMin, x2 = xMax;
+                const y1 = slope*x1 + intercept, y2 = slope*x2 + intercept;
+                const X1 = 0, X2 = 320;
+                const Y1 = 200 - (y1 - yMin)/(yMax - yMin)*200;
+                const Y2 = 200 - (y2 - yMin)/(yMax - yMin)*200;
+                return <line x1={X1} y1={Y1} x2={X2} y2={Y2} stroke="#9CA3AF" strokeWidth="1.4" strokeDasharray="5 4" />;
+              })()}
+              {/* points */}
+              {fp.map(p => {
+                const c = bandColor(p.score);
+                const X = (p.budget - xMin)/(xMax - xMin) * 320;
+                const Y = 200 - (p.score - yMin)/(yMax - yMin) * 200;
+                return (
+                  <g key={p.code}>
+                    <circle cx={X} cy={Y} r="8" fill={c.fill} stroke={c.text} strokeWidth="1.6" />
+                    <text x={X} y={Y+2.5} textAnchor="middle" style={{ fontSize: 8, fontWeight: 700, fill: c.text }}>{p.code.slice(1)}</text>
+                  </g>
+                );
+              })}
+              {/* axis labels */}
+              <text x="160" y="232" textAnchor="middle" style={{ fontSize: 9.5, fill: "var(--ink-3)", fontWeight: 600 }}>Budget (₹ Cr) →</text>
+              <text x="-18" y="100" textAnchor="middle" transform="rotate(-90 -18 100)" style={{ fontSize: 9.5, fill: "var(--ink-3)", fontWeight: 600 }}>Score →</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Tab5() {
+  const [sub, setSub] = useState("A");
+  return (
+    <div className="content-inner">
+      <SubTabs active={sub} onChange={setSub} />
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+        {sub === "A" && <Tab5A />}
+        {sub === "B" && <Tab5B />}
+        {sub === "C" && <Tab5C />}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP
+   ============================================================ */
+
+function App() {
+  const [tab, setTab] = useState(1);
+  return (
+    <FilterProvider>
+      <div style={{ width: "100%", height: "100%", position: "relative" }} data-screen-label={`Tab ${tab}`}>
+        <div className="body-row">
+          <VNav active={tab} onChange={setTab} />
+          <div className="main-col">
+            <Header active={tab} />
+            <FilterBar />
+            <div className="content">
+              {tab === 1 && <Tab1 />}
+              {tab === 2 && <Tab2 />}
+              {tab === 3 && <Tab3 />}
+              {tab === 4 && <Tab4 />}
+              {tab === 5 && <Tab5 />}
+            </div>
+            <Footer tab={tab} />
+          </div>
+        </div>
+      </div>
+    </FilterProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
