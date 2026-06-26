@@ -1,0 +1,144 @@
+<title>Case Study — PARIVARTAN Impact Dashboard · Samarth Rana</title>
+<style>
+  :root {
+    --teal:     #0A4F6B;
+    --teal-lt:  #E8F4F8;
+    --teal-mid: #1A7A9A;
+    --gold:     #A0692B;
+    --gold-lt:  #FEF6E9;
+    --ink:      #0C1C24;
+    --ink-2:    #2D4A58;
+    --ink-3:    #5E7D8A;
+    --rule:     #D8E6EC;
+    --ground:   #F5F8FA;
+    --white:    #FFFFFF;
+    --font:     'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono:     'Courier New', Courier, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  .page { max-width: 740px; margin: 0 auto; padding: 2.5rem 2rem 3rem; border-top: 3px solid var(--teal); }
+
+  /* ── TOP BAR ── */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 0.75rem; }
+  .client-badge { display: flex; align-items: center; gap: 0.6rem; }
+  .teal-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+  .client-name { font-size: 0.78rem; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.1em; }
+  .status-pill { font-size: 0.72rem; padding: 0.2rem 0.65rem; background: var(--teal-lt); color: var(--teal); border-radius: 100px; font-weight: 600; display: flex; align-items: center; gap: 0.35rem; }
+  .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+
+  /* ── TITLE ── */
+  .title-block { margin-bottom: 1.75rem; }
+  .cs-title { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(1.5rem, 4vw, 2rem); font-weight: bold; color: var(--ink); line-height: 1.2; margin-bottom: 0.4rem; text-wrap: balance; }
+  .cs-sub { font-size: 0.9rem; color: var(--ink-3); line-height: 1.55; }
+
+  /* ── STATS ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1.75rem; }
+  .stat { background: var(--white); border: 1px solid var(--rule); border-radius: 8px; padding: 0.9rem 1rem; text-align: center; }
+  .stat-n { font-size: 1.4rem; font-weight: 800; color: var(--teal); line-height: 1; margin-bottom: 0.25rem; font-variant-numeric: tabular-nums; }
+  .stat-l { font-size: 0.7rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* ── TWO COL ── */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .col-card { background: var(--white); border: 1px solid var(--rule); border-radius: 8px; padding: 1.1rem 1.2rem; }
+  .col-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--teal); margin-bottom: 0.6rem; }
+  .prob-text { font-size: 0.86rem; color: var(--ink-2); line-height: 1.65; }
+
+  /* ── BUILT LIST ── */
+  .built-list { display: flex; flex-direction: column; gap: 0.45rem; }
+  .bi { display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.84rem; }
+  .bi-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); flex-shrink: 0; margin-top: 0.55em; }
+  .bi-text { color: var(--ink-2); line-height: 1.5; }
+  .bi-text b { color: var(--ink); }
+
+  /* ── DECISION HIGHLIGHT ── */
+  .decision-block { background: var(--gold-lt); border: 1px solid #FCDBA8; border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+  .dec-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold); margin-bottom: 0.45rem; }
+  .dec-text { font-size: 0.86rem; color: var(--ink-2); line-height: 1.7; }
+  .dec-text b { color: var(--ink); }
+
+  /* ── HOW BUILT ── */
+  .how-built { background: var(--teal-lt); border: 1px solid #BDD9E4; border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.84rem; }
+  .hb-icon { font-family: var(--mono); font-size: 0.75rem; color: var(--teal); font-weight: 700; flex-shrink: 0; padding-top: 0.15rem; }
+  .hb-text { color: var(--ink-2); line-height: 1.6; }
+  .hb-text b { color: var(--teal); }
+
+  /* ── FOOTER ── */
+  .cs-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+  .author-info { font-size: 0.8rem; color: var(--ink-3); }
+  .author-info b { color: var(--ink); }
+  .wf-link { font-size: 0.82rem; font-weight: 600; color: var(--teal); text-decoration: none; padding: 0.35rem 0.9rem; border: 1.5px solid var(--teal); border-radius: 5px; transition: background 0.15s; }
+  .wf-link:hover { background: var(--teal-lt); }
+  .wf-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 1.5rem 1.1rem 2.5rem; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .cols { grid-template-columns: 1fr; }
+    .stat-n { font-size: 1.2rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="client-badge">
+      <div class="teal-dot"></div>
+      <span class="client-name">HDFC CSR · PARIVARTAN Programme · Dhwani RIS</span>
+    </div>
+    <span class="status-pill">Wireframe Accepted</span>
+  </div>
+
+  <!-- TITLE -->
+  <div class="title-block">
+    <h1 class="cs-title">PARIVARTAN Impact Dashboard</h1>
+    <p class="cs-sub">Rebuilding HDFC's CSR monitoring from score tables to programme intelligence — across 118 projects, 10 implementing partners, and 4 thematic areas · March 2026</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-n">118</div><div class="stat-l">Projects</div></div>
+    <div class="stat"><div class="stat-n">10</div><div class="stat-l">NGO Partners</div></div>
+    <div class="stat"><div class="stat-n">4</div><div class="stat-l">Thematic Areas</div></div>
+    <div class="stat"><div class="stat-n">5</div><div class="stat-l">Dashboard Sections</div></div>
+  </div>
+
+  <!-- PROBLEM + BUILT -->
+  <div class="cols">
+    <div class="col-card">
+      <div class="col-label">Problem</div>
+      <p class="prob-text">The existing dashboard was two pages of OECD score tables. HDFC could look up a number but couldn't answer the questions that drive programme decisions: which of the 10 implementing partners is underperforming? Which intervention is working? How does the programme track across India's states? After 1.5 years of engagement, this had never been built. Samarth took over as SPOC in March 2026 — the wireframe was accepted within the same quarter.</p>
+    </div>
+    <div class="col-card">
+      <div class="col-label">What I built</div>
+      <div class="built-list">
+        <div class="bi"><div class="bi-dot"></div><div class="bi-text"><b>5-section wireframe</b> — Impact Overview, Parameter Scoring (year-over-year), OECD Analysis, State-wise India map, Project Performance across partner / regional / intervention views</div></div>
+        <div class="bi"><div class="bi-dot"></div><div class="bi-text"><b>Data logic sheet</b> — all programme indicators mapped to database schema tables</div></div>
+        <div class="bi"><div class="bi-dot"></div><div class="bi-text"><b>Reckoner automation</b> — twice-monthly partner reports moved from fully manual to automated via Python + Power BI, with a delivery interface built into the dashboard itself</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECISION HIGHLIGHT -->
+  <div class="decision-block">
+    <div class="dec-label">Research before design</div>
+    <p class="dec-text">Before touching the wireframe, attended HDFC's national programme dissemination — sat through presentations from all 10 NGO implementing partners, took notes on what they flagged as broken, and cross-questioned for clarity. <b>The regional comparison view, partner accountability section, and intervention performance ranking in the final wireframe came directly from what partners raised on that floor.</b></p>
+  </div>
+
+  <!-- HOW BUILT -->
+  <div class="how-built">
+    <span class="hb-icon">⚡</span>
+    <p class="hb-text">Built using <b>Claude CLI</b> throughout — information architecture, scripting, logic building, and data mapping. <b>Claude Design Tool</b> for prototyping and wireframe iterations. <b>Claude Power BI extension</b> to identify what data transformations were needed at each step. Multiple client review cycles with revisions; wireframe formally accepted by HDFC.</p>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="cs-footer">
+    <div class="author-info"><b>Samarth Rana</b> · Project Analyst, Dhwani RIS · Mar 2026–Present</div>
+    <a class="wf-link" href="https://samarthrana.github.io/parivartan-dashboard-/" target="_blank" rel="noopener">View Wireframe →</a>
+  </div>
+
+</div>
